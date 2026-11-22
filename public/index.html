@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>知音配对 · 找一位合适的音乐老师</title>
+<meta name="description" content="知音配对：学生 / 家长 与音乐老师互相配对。" />
+<meta property="og:title" content="知音配对 · MusicMatch" />
+<meta property="og:description" content="学生 / 家长 ↔ 音乐老师，双向选择。免费注册，两种身份。" />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234b2e5e'/%3E%3Cpath d='M13 23V10l10-2v13' stroke='%23f2c14e' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='10.5' cy='23' r='3' fill='%23f2c14e'/%3E%3Ccircle cx='20.5' cy='21' r='3' fill='%23f2c14e'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+<div class="stafflines" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="brand" href="#" data-go="home">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32" width="30" height="30"><rect width="32" height="32" rx="9" fill="currentColor"/><path d="M13 23V10l10-2v13" stroke="#f2c14e" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="10.5" cy="23" r="3" fill="#f2c14e"/><circle cx="20.5" cy="21" r="3" fill="#f2c14e"/></svg>
+    </span>
+    <span class="brand-text">
+      <b data-i18n="brand.name">知音配对</b>
+      <i data-i18n="brand.sub">MUSICMATCH</i>
+    </span>
+  </a>
+
+  <nav class="topnav" id="topnav">
+    <button data-go="browse" class="navlink"><span data-i18n="nav.browse">找配对</span></button>
+    <button data-go="requests" class="navlink" id="navRequests">
+      <span data-i18n="nav.requests">我的配对</span><span class="badge" id="reqBadge" hidden>0</span>
+    </button>
+    <button data-go="profile" class="navlink"><span data-i18n="nav.profile">我的资料</span></button>
+  </nav>
+
+  <div class="langswitch" id="langswitch" role="group" aria-label="Language">
+    <button type="button" data-lang="zh" aria-pressed="true">中</button>
+    <button type="button" data-lang="en" aria-pressed="false">EN</button>
+  </div>
+
+  <div class="topactions" id="topactions">
+    <button class="btn ghost" data-go="login" data-i18n="nav.login">登录</button>
+    <button class="btn solid" data-go="register" data-i18n="nav.register">免费注册</button>
+  </div>
+
+  <div class="userchip" id="userchip" hidden>
+    <span class="avatar" id="chipAvatar">音</span>
+    <span class="chipmeta"><b id="chipName">—</b><i id="chipRole">—</i></span>
+    <button class="btn tiny" id="logoutBtn" data-i18n="nav.logout">退出</button>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ================= 首页 ================= -->
+  <section class="view" id="view-home">
+    <div class="hero">
+      <p class="eyebrow" data-i18n="home.eyebrow">钢琴 · 小提琴 · 声乐 · 吉他 · 古筝 · 架子鼓 · 更多</p>
+      <h1>
+        <span data-i18n="home.title.a">找到那位</span><span class="hl" data-i18n="home.title.hl">听得懂你</span><span data-i18n="home.title.b">的音乐老师</span>
+      </h1>
+      <p class="lead">
+        <span data-i18n="home.lead1">这里不讲排名，只讲合不合适。</span><br />
+        <span data-i18n="home.lead2">老师写清自己怎么教，学生和家长写清自己想学什么 —— 双方都看得见，看顺眼了再互相点一次「想认识」。</span>
+      </p>
+      <div class="hero-actions">
+        <button class="btn solid big" data-go="register" data-role="family" data-i18n="home.cta.family">我是学生 / 家长</button>
+        <button class="btn outline big" data-go="register" data-role="teacher" data-i18n="home.cta.teacher">我是音乐老师</button>
+      </div>
+      <div class="stats" id="homeStats"></div>
+    </div>
+
+    <div class="roles">
+      <article class="rolecard fam">
+        <div class="rc-head">
+          <span class="rc-icon">🎧</span>
+          <h2 data-i18n="role.family.card.title">家长 / 学生</h2>
+        </div>
+        <ul>
+          <li data-i18n="role.family.b1">写下想学的乐器、现在的水平和目标</li>
+          <li data-i18n="role.family.b2">填预算和上课方式（线上 / 线下 / 都行）</li>
+          <li data-i18n="role.family.b3">浏览正在收学生的老师，按乐器、城市、课时费筛</li>
+          <li data-i18n="role.family.b4">老师回你之后，双方才看到联系方式</li>
+        </ul>
+        <button class="btn solid wide" data-go="register" data-role="family" data-i18n="role.family.cta">创建学生账号</button>
+      </article>
+
+      <article class="rolecard tea">
+        <div class="rc-head">
+          <span class="rc-icon">🎼</span>
+          <h2 data-i18n="role.teacher.card.title">音乐老师</h2>
+        </div>
+        <ul>
+          <li data-i18n="role.teacher.b1">写清教的乐器、可教级别、教龄和资质</li>
+          <li data-i18n="role.teacher.b2">定课时费和授课方式，学生先看得见再决定</li>
+          <li data-i18n="role.teacher.b3">浏览附近正在找老师的学生需求</li>
+          <li data-i18n="role.teacher.b4">你同意之后，才会把联系方式交出去</li>
+        </ul>
+        <button class="btn solid wide" data-go="register" data-role="teacher" data-i18n="role.teacher.cta">创建老师账号</button>
+      </article>
+    </div>
+
+    <div class="how">
+      <h2 data-i18n="how.title">怎么个配对法</h2>
+      <ol class="steps">
+        <li><b data-i18n="how.s1.t">1 · 选身份</b><span data-i18n="how.s1.d">老师，或者家长 / 学生。一个账号只用一种，资料字段完全不一样。</span></li>
+        <li><b data-i18n="how.s2.t">2 · 填资料</b><span data-i18n="how.s2.d">乐器、级别、预算或课时费、城市、授课方式。填得越具体，越容易被对上。</span></li>
+        <li><b data-i18n="how.s3.t">3 · 点「想认识」</b><span data-i18n="how.s3.d">只能一位老师配一位学生，所以先看资料再动手，别群发。</span></li>
+        <li><b data-i18n="how.s4.t">4 · 双方同意才见面</b><span data-i18n="how.s4.d">对方同意，两个人才互相看到邮箱；拒绝也不会通知得太难看。</span></li>
+      </ol>
+    </div>
+
+    <div class="cta">
+      <h2 data-i18n="cta.title">先注册，再慢慢挑</h2>
+      <p data-i18n="cta.sub">免费、不用手机号。想换身份？换个邮箱再注册一个就好。</p>
+      <button class="btn solid big" data-go="register" data-i18n="cta.btn">现在开始</button>
+    </div>
+  </section>
+
+  <!-- ================= 登录 ================= -->
+  <section class="view" id="view-login" hidden>
+    <div class="authwrap">
+      <div class="authcard">
+        <h1 data-i18n="auth.login.title">欢迎回来</h1>
+        <p class="muted" data-i18n="auth.login.sub">登录后可以看配对请求、改资料。</p>
+        <form id="loginForm" class="form" autocomplete="on">
+          <label><span data-i18n="auth.email">邮箱</span>
+            <input type="email" name="email" required data-i18n-ph="auth.email.ph" placeholder="you@example.com" />
+          </label>
+          <label><span data-i18n="auth.password">密码</span>
+            <input type="password" name="password" required minlength="8" data-i18n-ph="auth.password.ph" placeholder="至少 8 位" />
+          </label>
+          <button class="btn solid wide" type="submit" data-i18n="auth.login.btn">登录</button>
+          <p class="formerr" id="loginErr" hidden></p>
+        </form>
+        <p class="switch"><span data-i18n="auth.noaccount">还没有账号？</span><button class="linkbtn" data-go="register" data-i18n="auth.goRegister">免费注册</button></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 注册 ================= -->
+  <section class="view" id="view-register" hidden>
+    <div class="authwrap">
+      <div class="authcard wide">
+        <h1 data-i18n="auth.reg.title">创建账号</h1>
+        <p class="muted" data-i18n="auth.reg.sub">先选身份 —— 这一步决定你之后要填哪些资料，注册后不能改。</p>
+
+        <div class="rolepick" id="rolepick">
+          <button type="button" class="roleopt" data-role="family">
+            <span class="ro-icon">🎧</span>
+            <b data-i18n="auth.role.family">家长 / 学生</b>
+            <small data-i18n="auth.role.family.sub">我要找老师</small>
+          </button>
+          <button type="button" class="roleopt" data-role="teacher">
+            <span class="ro-icon">🎼</span>
+            <b data-i18n="auth.role.teacher">音乐老师</b>
+            <small data-i18n="auth.role.teacher.sub">我在收学生</small>
+          </button>
+        </div>
+
+        <form id="registerForm" class="form" autocomplete="on" hidden>
+          <div class="grid2">
+            <label><span data-i18n="auth.name">名字 / 昵称</span>
+              <input name="name" required minlength="2" maxlength="40" data-i18n-ph="auth.name.ph" placeholder="怎么称呼你" />
+            </label>
+            <label><span data-i18n="auth.city">城市</span>
+              <input name="city" maxlength="40" data-i18n-ph="auth.city.ph" placeholder="例如 杭州" />
+            </label>
+          </div>
+          <div class="grid2">
+            <label><span data-i18n="auth.email">邮箱</span>
+              <input type="email" name="email" required data-i18n-ph="auth.email.ph2" placeholder="用来登录，也只对你同意的人可见" />
+            </label>
+            <label><span data-i18n="auth.password">密码</span>
+              <input type="password" name="password" required minlength="8" data-i18n-ph="auth.password.ph" placeholder="至少 8 位" />
+            </label>
+          </div>
+
+          <!-- 老师专属 -->
+          <fieldset class="rolefields" data-for="teacher" hidden>
+            <legend data-i18n="auth.teacher.legend">老师的资料</legend>
+            <label><span data-i18n="auth.instruments.teacher">教的乐器（可多个，逗号分隔）</span>
+              <input name="instruments" data-k="instruments" data-i18n-ph="auth.instruments.teacher.ph" placeholder="钢琴、乐理" />
+            </label>
+            <div class="grid2">
+              <label><span data-i18n="auth.levels">可教级别</span>
+                <select name="levels" data-k="levels" data-multi="1">
+                  <option value="零基础" data-i18n="level.zero">零基础</option>
+                  <option value="入门" data-i18n="level.beginner">入门</option>
+                  <option value="进阶" data-i18n="level.intermediate">进阶</option>
+                  <option value="高级" data-i18n="level.advanced">高级</option>
+                  <option value="艺考 / 专业" data-i18n="level.pro">艺考 / 专业</option>
+                </select>
+              </label>
+              <label><span data-i18n="auth.years">教龄（年）</span>
+                <input type="number" name="years" data-k="years" min="0" max="60" value="3" />
+              </label>
+            </div>
+            <div class="grid2">
+              <label><span data-i18n="auth.rate">课时费（元 / 课时）</span>
+                <input type="number" name="rate" data-k="rate" min="0" max="5000" step="10" placeholder="200" />
+              </label>
+              <label><span data-i18n="auth.mode">授课方式</span>
+                <select name="mode" data-k="mode">
+                  <option value="线上 + 线下" data-i18n="mode.both">线上 + 线下</option>
+                  <option value="线下" data-i18n="mode.offline">线下</option>
+                  <option value="线上" data-i18n="mode.online">线上</option>
+                </select>
+              </label>
+            </div>
+            <label><span data-i18n="auth.styles">风格 / 流派</span>
+              <input name="styles" data-k="styles" data-i18n-ph="auth.styles.ph" placeholder="古典、流行、爵士…" />
+            </label>
+            <label><span data-i18n="auth.education">院校 / 资质</span>
+              <input name="education" data-k="education" data-i18n-ph="auth.education.ph" placeholder="例：上音钢琴表演，十级，教龄 8 年" />
+            </label>
+            <label><span data-i18n="auth.intro.teacher">介绍一下你的课</span>
+              <textarea name="intro" data-k="intro" rows="4" maxlength="1200" data-i18n-ph="auth.intro.teacher.ph" placeholder="你怎么带零基础的学生？一节课大概什么节奏？"></textarea>
+            </label>
+          </fieldset>
+
+          <!-- 家长 / 学生专属 -->
+          <fieldset class="rolefields" data-for="family" hidden>
+            <legend data-i18n="auth.family.legend">学生 / 家长的资料</legend>
+            <label><span data-i18n="auth.instruments.family">想学的乐器（可多个，逗号分隔）</span>
+              <input name="instruments" data-k="instruments" data-i18n-ph="auth.instruments.family.ph" placeholder="钢琴、乐理" />
+            </label>
+            <div class="grid2">
+              <label><span data-i18n="auth.level">现在的水平</span>
+                <select name="level" data-k="level">
+                  <option value="零基础" data-i18n="level.zero">零基础</option>
+                  <option value="入门" data-i18n="level.beginner">入门</option>
+                  <option value="进阶" data-i18n="level.intermediate">进阶</option>
+                  <option value="高级" data-i18n="level.advanced">高级</option>
+                  <option value="艺考 / 专业" data-i18n="level.pro">艺考 / 专业</option>
+                </select>
+              </label>
+              <label><span data-i18n="auth.studentAge">学生年龄</span>
+                <input name="studentAge" data-k="studentAge" maxlength="40" data-i18n-ph="auth.studentAge.ph" placeholder="8 岁 / 成人 / 初二" />
+              </label>
+            </div>
+            <div class="grid2">
+              <label><span data-i18n="auth.budget">预算（元 / 课时）</span>
+                <input type="number" name="budget" data-k="budget" min="0" max="5000" step="10" placeholder="200" />
+              </label>
+              <label><span data-i18n="auth.mode">授课方式</span>
+                <select name="mode" data-k="mode">
+                  <option value="线上 + 线下" data-i18n="mode.both">线上 + 线下</option>
+                  <option value="线下" data-i18n="mode.offline">线下</option>
+                  <option value="线上" data-i18n="mode.online">线上</option>
+                </select>
+              </label>
+            </div>
+            <label><span data-i18n="auth.goal">目标 / 诉求</span>
+              <input name="goal" data-k="goal" maxlength="160" data-i18n-ph="auth.goal.ph" placeholder="考级、兴趣、想弹一首喜欢的曲子…" />
+            </label>
+            <label><span data-i18n="auth.intro.family">补充说明</span>
+              <textarea name="intro" data-k="intro" rows="4" maxlength="1200" data-i18n-ph="auth.intro.family.ph" placeholder="家里有琴吗？每周能练多久？希望老师什么风格？"></textarea>
+            </label>
+          </fieldset>
+
+          <button class="btn solid wide" type="submit" id="regSubmit" disabled data-i18n="auth.submit.pick">先选一个身份</button>
+          <p class="formerr" id="regErr" hidden></p>
+        </form>
+
+        <p class="switch"><span data-i18n="auth.hasAccount">已经有账号？</span><button class="linkbtn" data-go="login" data-i18n="auth.goLogin">直接登录</button></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 找配对 ================= -->
+  <section class="view" id="view-browse" hidden>
+    <div class="pagehead">
+      <div>
+        <h1 id="browseTitle" data-i18n="browse.title.teacher">找一位音乐老师</h1>
+        <p class="muted" id="browseSub" data-i18n="browse.sub.teacher">按乐器、城市、课时费筛一筛，看到合适的就点「想认识」。</p>
+      </div>
+      <div class="segment" id="browseSwitch">
+        <button data-role="teacher" data-i18n="browse.tab.teacher">看老师</button>
+        <button data-role="family" data-i18n="browse.tab.family">看学生需求</button>
+      </div>
+    </div>
+
+    <form class="filters" id="filterForm">
+      <label class="fld"><span data-i18n="filters.instrument">乐器</span><input name="instrument" data-i18n-ph="filters.instrument.ph" placeholder="钢琴 / 小提琴…" /></label>
+      <label class="fld"><span data-i18n="filters.city">城市</span><input name="city" data-i18n-ph="filters.city.ph" placeholder="杭州" /></label>
+      <label class="fld"><span data-i18n="filters.mode">授课方式</span>
+        <select name="mode">
+          <option value="" data-i18n="filters.any">不限</option>
+          <option value="线上 + 线下" data-i18n="mode.both">线上 + 线下</option>
+          <option value="线下" data-i18n="mode.offline">线下</option>
+          <option value="线上" data-i18n="mode.online">线上</option>
+        </select>
+      </label>
+      <label class="fld"><span data-i18n="filters.keyword">关键词</span><input name="q" data-i18n-ph="filters.keyword.ph" placeholder="爵士 / 考级 / 成人…" /></label>
+      <button class="btn solid" type="submit" data-i18n="filters.apply">筛选</button>
+      <button class="btn ghost" type="reset" id="resetFilter" data-i18n="filters.reset">清空</button>
+    </form>
+
+    <div class="cards" id="cards"></div>
+    <p class="empty" id="cardsEmpty" hidden data-i18n="browse.empty">这里还没有符合条件的资料。换个筛选条件，或者过会儿再来看看。</p>
+  </section>
+
+  <!-- ================= 我的配对 ================= -->
+  <section class="view" id="view-requests" hidden>
+    <div class="pagehead">
+      <div>
+        <h1 data-i18n="req.title">我的配对</h1>
+        <p class="muted" data-i18n="req.sub">对方同意之后，两个人的邮箱才会互相出现。</p>
+      </div>
+    </div>
+
+    <h2 class="sectitle" data-i18n="req.incoming">收到的请求</h2>
+    <div class="reqlist" id="incoming"></div>
+    <p class="empty" id="incomingEmpty" hidden data-i18n="req.incoming.empty">还没有人给你发请求。</p>
+
+    <h2 class="sectitle" data-i18n="req.outgoing">我发出的请求</h2>
+    <div class="reqlist" id="outgoing"></div>
+    <p class="empty" id="outgoingEmpty" hidden data-i18n="req.outgoing.empty">你还没主动找过谁。</p>
+  </section>
+
+  <!-- ================= 我的资料 ================= -->
+  <section class="view" id="view-profile" hidden>
+    <div class="pagehead">
+      <div>
+        <h1 data-i18n="profile.title">我的资料</h1>
+        <p class="muted" data-i18n="profile.sub">资料越具体，越容易被对的人找到。</p>
+      </div>
+      <span class="pill" id="profileRolePill">—</span>
+    </div>
+
+    <form class="form cardform" id="profileForm">
+      <div class="grid2">
+        <label><span data-i18n="auth.name">名字 / 昵称</span><input name="name" required minlength="2" maxlength="40" /></label>
+        <label><span data-i18n="auth.city">城市</span><input name="city" maxlength="40" /></label>
+      </div>
+      <div class="grid2">
+        <label><span data-i18n="profile.emailLocked">邮箱（登录用，不可改）</span><input name="email" disabled /></label>
+        <label><span data-i18n="profile.created">注册时间</span><input name="createdAt" disabled /></label>
+      </div>
+      <div id="profileFields"></div>
+      <button class="btn solid" type="submit" data-i18n="profile.save">保存资料</button>
+      <p class="formerr" id="profileErr" hidden></p>
+      <p class="formok" id="profileOk" hidden data-i18n="profile.saved">已保存 ✓</p>
+    </form>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <p data-i18n="foot.main">知音配对 · MusicMatch — 一个把学生和音乐老师放在同一张桌子上的小站。</p>
+  <p class="fine" data-i18n="foot.fine">双方同意后才交换联系方式 · 不公开手机号 · 遇到骚扰可以直接拒绝并删除请求</p>
+</footer>
+
+<!-- 发起配对的弹窗 -->
+<div class="modal" id="modal" hidden>
+  <div class="modalbox">
+    <h3 id="modalTitle">想认识</h3>
+    <p class="muted" id="modalSub" data-i18n="modal.sub">发一条请求过去。对方同意后，你们才会互相看到邮箱。</p>
+    <textarea id="modalMsg" rows="4" maxlength="500" data-i18n-ph="modal.msg.ph" placeholder="说一句你想学什么 / 你能教什么（可不填）"></textarea>
+    <div class="modalactions">
+      <button class="btn ghost" id="modalCancel" data-i18n="modal.cancel">取消</button>
+      <button class="btn solid" id="modalSend" data-i18n="modal.send">发出请求</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="/i18n.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

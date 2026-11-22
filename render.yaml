@@ -1,0 +1,28 @@
+# Render 一键部署模板（Blueprint）
+# 用法：仓库推到 GitHub → Render 后台 New → Blueprint → 选仓库 → Apply
+# 注意：Render 免费 Postgres 创建 30 天后会过期，到期前换成 Neon 免费库（把 DATABASE_URL 指过去即可，代码不用改）
+databases:
+  - name: musicmatch-db
+    plan: free
+    databaseName: musicmatch
+    user: musicmatch
+    region: singapore
+
+services:
+  - type: web
+    name: musicmatch
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install
+    startCommand: node server.mjs
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: musicmatch-db
+          property: connectionString
+      - key: NODE_VERSION
+        value: "22"
+      - key: PGSSL
+        value: "on"
