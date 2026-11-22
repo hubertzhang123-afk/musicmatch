@@ -165,7 +165,7 @@
               <input name="name" required minlength="2" maxlength="40" data-i18n-ph="auth.name.ph" placeholder="怎么称呼你" />
             </label>
             <label><span data-i18n="auth.city">城市</span>
-              <input name="city" maxlength="40" data-i18n-ph="auth.city.ph" placeholder="例如 杭州" />
+              <input name="city" maxlength="40" list="cityOptions" data-i18n-ph="auth.city.ph" placeholder="例如 杭州" />
             </label>
           </div>
           <div class="grid2">
@@ -284,13 +284,21 @@
 
     <form class="filters" id="filterForm">
       <label class="fld"><span data-i18n="filters.instrument">乐器</span><input name="instrument" data-i18n-ph="filters.instrument.ph" placeholder="钢琴 / 小提琴…" /></label>
-      <label class="fld"><span data-i18n="filters.city">城市</span><input name="city" data-i18n-ph="filters.city.ph" placeholder="杭州" /></label>
+      <label class="fld"><span data-i18n="filters.city">城市</span><input name="city" list="cityOptions" data-i18n-ph="filters.city.ph" placeholder="杭州" /></label>
       <label class="fld"><span data-i18n="filters.mode">授课方式</span>
         <select name="mode">
           <option value="" data-i18n="filters.any">不限</option>
           <option value="线上 + 线下" data-i18n="mode.both">线上 + 线下</option>
           <option value="线下" data-i18n="mode.offline">线下</option>
           <option value="线上" data-i18n="mode.online">线上</option>
+        </select>
+      </label>
+      <label class="fld"><span data-i18n="filters.maxRate">预算上限</span>
+        <select name="maxRate">
+          <option value="" data-i18n="filters.any">不限</option>
+          <option value="200" data-i18n="filters.rate200">¥200 以下</option>
+          <option value="300" data-i18n="filters.rate300">¥300 以下</option>
+          <option value="400" data-i18n="filters.rate400">¥400 以下</option>
         </select>
       </label>
       <label class="fld"><span data-i18n="filters.keyword">关键词</span><input name="q" data-i18n-ph="filters.keyword.ph" placeholder="爵士 / 考级 / 成人…" /></label>
@@ -333,7 +341,7 @@
     <form class="form cardform" id="profileForm">
       <div class="grid2">
         <label><span data-i18n="auth.name">名字 / 昵称</span><input name="name" required minlength="2" maxlength="40" /></label>
-        <label><span data-i18n="auth.city">城市</span><input name="city" maxlength="40" /></label>
+        <label><span data-i18n="auth.city">城市</span><input name="city" maxlength="40" list="cityOptions" /></label>
       </div>
       <div class="grid2">
         <label><span data-i18n="profile.emailLocked">邮箱（登录用，不可改）</span><input name="email" disabled /></label>
@@ -367,6 +375,29 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
+
+<!-- 城市候选：填过就能直接选，也可以自己随便填 -->
+<datalist id="cityOptions">
+  <option value="北京"></option><option value="上海"></option><option value="广州"></option>
+  <option value="深圳"></option><option value="杭州"></option><option value="南京"></option>
+  <option value="苏州"></option><option value="成都"></option><option value="重庆"></option>
+  <option value="武汉"></option><option value="西安"></option><option value="天津"></option>
+  <option value="青岛"></option><option value="厦门"></option><option value="长沙"></option>
+  <option value="郑州"></option><option value="合肥"></option><option value="济南"></option>
+  <option value="沈阳"></option><option value="大连"></option><option value="福州"></option>
+  <option value="昆明"></option><option value="南昌"></option><option value="南宁"></option>
+  <option value="贵阳"></option><option value="哈尔滨"></option><option value="长春"></option>
+  <option value="石家庄"></option><option value="太原"></option><option value="兰州"></option>
+  <option value="乌鲁木齐"></option><option value="呼和浩特"></option><option value="银川"></option>
+  <option value="西宁"></option><option value="拉萨"></option><option value="海口"></option>
+  <option value="三亚"></option><option value="宁波"></option><option value="无锡"></option>
+  <option value="佛山"></option><option value="东莞"></option><option value="珠海"></option>
+  <option value="中山"></option><option value="温州"></option><option value="常州"></option>
+  <option value="香港"></option><option value="澳门"></option><option value="台湾"></option>
+  <option value="台北"></option><option value="新北"></option><option value="桃园"></option>
+  <option value="台中"></option><option value="台南"></option><option value="高雄"></option>
+  <option value="新竹"></option><option value="基隆"></option><option value="嘉义"></option>
+</datalist>
 
 <script src="/i18n.js"></script>
 <script src="/app.js"></script>
