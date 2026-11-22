@@ -12,4 +12,4 @@ not_found_handling = "single-page-application"
 [[d1_databases]]
 binding = "DB"
 database_name = "musicmatch"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "d319e4de-8599-4083-98f7-1d79ad7cea04"

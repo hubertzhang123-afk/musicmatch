@@ -7,6 +7,23 @@
 
 ## 线上地址
 
+**https://musicmatch.huberzhang.workers.dev**
+
+跑在 Cloudflare Workers 上（`worker/worker.mjs`），静态页面由 CDN 直接发，数据在 D1（APAC 区）。
+不绑卡、不休眠、关机也不影响。
+
+```bash
+# 改完代码重新部署
+CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... npx wrangler deploy
+```
+
+- 数据库：`musicmatch`（id `d319e4de-8599-4083-98f7-1d79ad7cea04`）
+- 免费额度：10 万请求/天、D1 500 万行读/天 + 10 万行写/天
+- 看线上日志：`npx wrangler tail`
+
+
+## 线上地址
+
 **https://dafiyu.tailf44e1d.ts.net:8443**
 
 走的是这台机器已有的 Tailscale Funnel（8443 端口独立映射，没动原来 443 → 3200 那条），
