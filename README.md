@@ -87,7 +87,30 @@ musicmatch/
 
 ## 部署到公网
 
-### 存储有两种模式
+### 方案一：Cloudflare Workers + D1（推荐，不需要信用卡）
+
+线上跑的是 `worker/worker.mjs`，静态页面由 Cloudflare 直接发，数据在 D1（SQLite）里。
+`server.mjs` 只用于本地开发，不参与线上。
+
+```bash
+# 一次性：登录 + 建库
+npx wrangler login
+npx wrangler d1 create musicmatch        # 把返回的 database_id 填进 wrangler.toml
+
+# 部署
+npx wrangler deploy                      # 之后 https://musicmatch.<你的子域>.workers.dev
+```
+
+细节：
+
+- 表结构不用手建，worker 第一次收到请求会自己 `create table if not exists`；
+- 免费档单次请求 CPU 只有 10ms，所以密码用 **PBKDF2-10k**（不是 scrypt）；
+- 本地调试 worker：`node tools/dev-worker.mjs 8788`（用 `node:sqlite` 模拟 D1，跑的就是线上那份代码）；
+- 也可以在 Cloudflare 后台 **Workers & Pages → Connect to Git** 绑这个仓库，以后 push 自动部署。
+
+### 方案二：Render（免费档要验证信用卡）
+
+#### 存储有两种模式
 
 | 环境变量 | 用哪套存储 | 什么时候用 |
 |---|---|---|

@@ -1,0 +1,15 @@
+# Cloudflare Workers + D1 部署配置
+name = "musicmatch"
+main = "worker/worker.mjs"
+compatibility_date = "2026-11-01"
+
+# 静态页面（index.html / app.js / i18n.js / styles.css）直接由 Cloudflare 发，不经过 worker
+[assets]
+directory = "./public"
+not_found_handling = "single-page-application"
+
+# D1 数据库绑定；database_id 在 Cloudflare 后台建库后替换（本地开发用占位值也能跑）
+[[d1_databases]]
+binding = "DB"
+database_name = "musicmatch"
+database_id = "00000000-0000-0000-0000-000000000000"
