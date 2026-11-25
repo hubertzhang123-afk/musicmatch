@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>知音配对 · 找一位合适的音乐老师</title>
-<meta name="description" content="知音配对：学生提单 → 系统排序 → 管理员分配老师。" />
+<title>知音配对 · 学生提申请，老师来接</title>
+<meta name="description" content="学生提交申请，老师按自己的专长挑学生；管理员由老师兼任，监督全站资料与分配。" />
 <meta property="og:title" content="知音配对 · MusicMatch" />
-<meta property="og:description" content="学生提交申请表，管理员按乐器、城市、预算排序后分配老师。" />
+<meta property="og:description" content="学生提申请，老师按专长挑学生，管理员监督全站。" />
 <meta property="og:type" content="website" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234b2e5e'/%3E%3Cpath d='M13 23V10l10-2v13' stroke='%23f2c14e' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='10.5' cy='23' r='3' fill='%23f2c14e'/%3E%3Ccircle cx='20.5' cy='21' r='3' fill='%23f2c14e'/%3E%3C/svg%3E" />
 <link rel="stylesheet" href="/styles.css" />
@@ -55,8 +55,8 @@
         <span data-i18n="home.title.a">找到那位</span><span class="hl" data-i18n="home.title.hl">听得懂你</span><span data-i18n="home.title.b">的音乐老师</span>
       </h1>
       <p class="lead">
-        <span data-i18n="home.lead1">学生填一张申请表，其它交给系统和分配老师。</span><br />
-        <span data-i18n="home.lead2">按乐器、城市、预算排好序，管理员把最合适的老师分配给你；老师也能看到你的时间安排和联系方式。</span>
+        <span data-i18n="home.lead1">学生写一张申请，老师按自己的专长来接。</span><br />
+        <span data-i18n="home.lead2">不排名、不比价。老师看到申请里的乐器、时间和备注，觉得对得上就接走；接了就只属于你。</span>
       </p>
       <div class="hero-actions">
         <button class="btn solid big" data-go="register" data-role="student" data-i18n="home.cta.student">我是学生</button>
@@ -69,10 +69,10 @@
       <article class="rolecard stu">
         <div class="rc-head"><span class="rc-icon">🎧</span><h2 data-i18n="role.student.card.title">学生</h2></div>
         <ul>
-          <li data-i18n="role.student.b1">填一张申请表：想学什么、什么时间方便、怎么联系</li>
-          <li data-i18n="role.student.b2">提交后进入管理台，按乐器 / 城市 / 预算自动排序</li>
-          <li data-i18n="role.student.b3">被分配后能看到老师的资料和联系方式</li>
-          <li data-i18n="role.student.b4">随时修改申请，老师那边同步更新</li>
+          <li data-i18n="role.student.b1">填一张申请：想学什么、什么时间方便、怎么联系</li>
+          <li data-i18n="role.student.b2">申请会出现在老师的「学生申请」里</li>
+          <li data-i18n="role.student.b3">被哪位老师接走，就直接看到他的资料和联系方式</li>
+          <li data-i18n="role.student.b4">随时修改申请，接你的老师同步更新</li>
         </ul>
         <button class="btn solid wide" data-go="register" data-role="student" data-i18n="role.student.cta">创建学生账号</button>
       </article>
@@ -80,10 +80,10 @@
       <article class="rolecard tea">
         <div class="rc-head"><span class="rc-icon">🎼</span><h2 data-i18n="role.teacher.card.title">音乐老师</h2></div>
         <ul>
-          <li data-i18n="role.teacher.b1">做自己的作品集：姓名、国籍、教学语言、各乐器资质</li>
-          <li data-i18n="role.teacher.b2">定课时费、授课方式、可教级别和风格</li>
-          <li data-i18n="role.teacher.b3">被分配后直接看到学生的资料和联系方式</li>
-          <li data-i18n="role.teacher.b4">学生的时间安排和备注都在「我的学生」里</li>
+          <li data-i18n="role.teacher.b1">作品集：姓名、国籍、教学语言、各乐器资质</li>
+          <li data-i18n="role.teacher.b2">在「学生申请」里按专长挑学生，点一下就接走</li>
+          <li data-i18n="role.teacher.b3">接到的学生立刻显示资料、时间和联系方式</li>
+          <li data-i18n="role.teacher.b4">接错了可以放回申请池，别人还能接</li>
         </ul>
         <button class="btn solid wide" data-go="register" data-role="teacher" data-i18n="role.teacher.cta">创建老师账号</button>
       </article>
@@ -91,10 +91,10 @@
       <article class="rolecard adm">
         <div class="rc-head"><span class="rc-icon">🗂</span><h2 data-i18n="role.admin.card.title">管理员</h2></div>
         <ul>
-          <li data-i18n="role.admin.b1">一屏看到所有申请、老师和分配情况</li>
-          <li data-i18n="role.admin.b2">系统按乐器匹配 / 同城 / 预算 / 现有学生数给出排序</li>
-          <li data-i18n="role.admin.b3">点一下把老师分配给某个学生，随时可以换人或撤回</li>
-          <li data-i18n="role.admin.b4">能看到全站账号和每个老师带了几个人</li>
+          <li data-i18n="role.admin.b1">管理员本身就是老师，也带学生、也能接申请</li>
+          <li data-i18n="role.admin.b2">额外能看到所有人的资料：老师、学生、联系方式</li>
+          <li data-i18n="role.admin.b3">所有申请与分配状态、上课时间，一屏看完</li>
+          <li data-i18n="role.admin.b4">必要时把某个学生放回申请池</li>
         </ul>
         <p class="mini" data-i18n="role.admin.note">管理员账号由站点内部开设，不开放注册。</p>
       </article>
@@ -104,9 +104,9 @@
       <h2 data-i18n="how.title">怎么个流程</h2>
       <ol class="steps">
         <li><b data-i18n="how.s1.t">1 · 学生提申请</b><span data-i18n="how.s1.d">乐器、上课时间、学生姓名、联系方式，一张表交给系统。</span></li>
-        <li><b data-i18n="how.s2.t">2 · 系统排序</b><span data-i18n="how.s2.d">乐器命中、同城、预算内、授课方式一致、目前带得少，都会加分。</span></li>
-        <li><b data-i18n="how.s3.t">3 · 管理员分配</b><span data-i18n="how.s3.d">看着排序结果点一下，不合适就换人，也可以取消重来。</span></li>
-        <li><b data-i18n="how.s4.t">4 · 双方看到彼此</b><span data-i18n="how.s4.d">老师看到学生的时间与联系方式，学生看到老师的资料与联系方式。</span></li>
+        <li><b data-i18n="how.s2.t">2 · 老师看申请池</b><span data-i18n="how.s2.d">所有还没人接的学生申请都在这里，按自己的专长挑。</span></li>
+        <li><b data-i18n="how.s3.t">3 · 老师接学生</b><span data-i18n="how.s3.d">点一下归你，别人看不到了；接错了可以放回去。</span></li>
+        <li><b data-i18n="how.s4.t">4 · 管理员看全局</b><span data-i18n="how.s4.d">所有老师、学生、分配状态和上课时间，一屏看清。</span></li>
       </ol>
     </div>
 
@@ -122,7 +122,7 @@
     <div class="authwrap">
       <div class="authcard">
         <h1 data-i18n="auth.login.title">欢迎回来</h1>
-        <p class="muted" data-i18n="auth.login.sub">学生看申请、老师看学生、管理员看管理台。</p>
+        <p class="muted" data-i18n="auth.login.sub">学生看申请、老师看申请池、管理员看全局。</p>
         <form id="loginForm" class="form" autocomplete="on">
           <label><span data-i18n="auth.email">邮箱</span>
             <input type="email" name="email" required data-i18n-ph="auth.email.ph" placeholder="you@example.com" />
@@ -204,18 +204,13 @@
                 <input type="number" name="years" data-k="years" min="0" max="60" value="3" />
               </label>
             </div>
-            <div class="grid2">
-              <label><span data-i18n="auth.rate">课时费（元 / 课时）</span>
-                <input type="number" name="rate" data-k="rate" min="0" max="5000" step="10" placeholder="200" />
-              </label>
-              <label><span data-i18n="auth.mode">授课方式</span>
-                <select name="mode" data-k="mode">
-                  <option value="线上 + 线下" data-i18n="mode.both">线上 + 线下</option>
-                  <option value="线下" data-i18n="mode.offline">线下</option>
-                  <option value="线上" data-i18n="mode.online">线上</option>
-                </select>
-              </label>
-            </div>
+            <label><span data-i18n="auth.mode">授课方式</span>
+              <select name="mode" data-k="mode">
+                <option value="线上 + 线下" data-i18n="mode.both">线上 + 线下</option>
+                <option value="线下" data-i18n="mode.offline">线下</option>
+                <option value="线上" data-i18n="mode.online">线上</option>
+              </select>
+            </label>
             <label><span data-i18n="auth.qualif">各乐器资质</span>
               <textarea name="qualifications" data-k="qualifications" rows="3" maxlength="600" data-i18n-ph="auth.qualif.ph" placeholder="例：钢琴 ABRSM 八级；乐理 上音硕士"></textarea>
             </label>
@@ -251,11 +246,6 @@
               <label><span data-i18n="auth.studentAge">学生年龄</span>
                 <input name="studentAge" data-k="studentAge" maxlength="40" data-i18n-ph="auth.studentAge.ph" placeholder="8 岁 / 成人" />
               </label>
-              <label><span data-i18n="auth.budget">预算（元 / 课时）</span>
-                <input type="number" name="budget" data-k="budget" min="0" max="5000" step="10" placeholder="200" />
-              </label>
-            </div>
-            <div class="grid2">
               <label><span data-i18n="auth.mode">授课方式</span>
                 <select name="mode" data-k="mode">
                   <option value="线上 + 线下" data-i18n="mode.both">线上 + 线下</option>
@@ -263,10 +253,10 @@
                   <option value="线上" data-i18n="mode.online">线上</option>
                 </select>
               </label>
-              <label><span data-i18n="auth.goal">目标 / 诉求</span>
-                <input name="goal" data-k="goal" maxlength="160" data-i18n-ph="auth.goal.ph" placeholder="考级、兴趣…" />
-              </label>
             </div>
+            <label><span data-i18n="auth.goal">目标 / 诉求</span>
+              <input name="goal" data-k="goal" maxlength="160" data-i18n-ph="auth.goal.ph" placeholder="考级、兴趣…" />
+            </label>
             <label><span data-i18n="auth.intro.family">补充说明</span>
               <textarea name="intro" data-k="intro" rows="3" maxlength="1200" data-i18n-ph="auth.intro.family.ph" placeholder="家里有琴吗？每周能练多久？"></textarea>
             </label>
@@ -281,12 +271,12 @@
     </div>
   </section>
 
-  <!-- ================= 浏览 ================= -->
+  <!-- ================= 浏览资料 ================= -->
   <section class="view" id="view-browse" hidden>
     <div class="pagehead">
       <div>
-        <h1 id="browseTitle" data-i18n="browse.title.teacher">找一位音乐老师</h1>
-        <p class="muted" id="browseSub" data-i18n="browse.sub.teacher">按乐器、城市、课时费筛一筛。</p>
+        <h1 id="browseTitle" data-i18n="browse.title.teacher">看看老师们</h1>
+        <p class="muted" id="browseSub" data-i18n="browse.sub.teacher">按乐器、城市、授课方式筛一筛。</p>
       </div>
       <div class="segment" id="browseSwitch">
         <button data-role="teacher" data-i18n="browse.tab.teacher">看老师</button>
@@ -305,14 +295,6 @@
           <option value="线上" data-i18n="mode.online">线上</option>
         </select>
       </label>
-      <label class="fld"><span data-i18n="filters.maxRate">预算上限</span>
-        <select name="maxRate">
-          <option value="" data-i18n="filters.any">不限</option>
-          <option value="200" data-i18n="filters.rate200">¥200 以下</option>
-          <option value="300" data-i18n="filters.rate300">¥300 以下</option>
-          <option value="400" data-i18n="filters.rate400">¥400 以下</option>
-        </select>
-      </label>
       <label class="fld"><span data-i18n="filters.keyword">关键词</span><input name="q" data-i18n-ph="filters.keyword.ph" placeholder="爵士 / 考级 / 成人…" /></label>
       <button class="btn solid" type="submit" data-i18n="filters.apply">筛选</button>
       <button class="btn ghost" type="reset" id="resetFilter" data-i18n="filters.reset">清空</button>
@@ -327,7 +309,7 @@
     <div class="pagehead">
       <div>
         <h1 data-i18n="req2.title">我的申请</h1>
-        <p class="muted" data-i18n="req2.sub">填好交给管理台，管理员按乐器、城市、预算排序后分配老师。</p>
+        <p class="muted" data-i18n="req2.sub">写完就有老师能看到；被接走之后你会看到他的资料和联系方式。</p>
       </div>
       <span class="pill" id="reqStatus">—</span>
     </div>
@@ -363,41 +345,51 @@
     </form>
   </section>
 
+  <!-- ================= 老师 / 管理员：学生申请池 ================= -->
+  <section class="view" id="view-pool" hidden>
+    <div class="pagehead">
+      <div>
+        <h1 data-i18n="pool.title">学生申请</h1>
+        <p class="muted" data-i18n="pool.sub">这些学生还没人接。看乐器、时间、备注，对得上就接走。</p>
+      </div>
+      <span class="pill" id="poolCount">—</span>
+    </div>
+    <div class="reqlist" id="poolList"></div>
+    <p class="empty" id="poolEmpty" hidden data-i18n="pool.empty">现在没有待接的申请。</p>
+  </section>
+
   <!-- ================= 老师：我的学生 ================= -->
   <section class="view" id="view-mystudents" hidden>
     <div class="pagehead">
       <div>
         <h1 data-i18n="my.title">我的学生</h1>
-        <p class="muted" data-i18n="my.sub">管理员分配给你的学生都在这里。</p>
+        <p class="muted" data-i18n="my.sub">你接下的学生都在这里。</p>
       </div>
       <span class="pill" id="myStudentCount">—</span>
     </div>
     <div class="reqlist" id="studentList"></div>
-    <p class="empty" id="studentsEmpty" hidden data-i18n="my.empty">还没有学生被分配给你。</p>
+    <p class="empty" id="studentsEmpty" hidden data-i18n="my.empty">你还没接过学生。</p>
   </section>
 
-  <!-- ================= 管理员：管理台 ================= -->
+  <!-- ================= 管理员：全站监督 ================= -->
   <section class="view" id="view-admin" hidden>
     <div class="pagehead">
       <div>
         <h1 data-i18n="admin.title">管理台</h1>
-        <p class="muted" data-i18n="admin.sub">所有申请、老师和分配情况一屏看完。</p>
+        <p class="muted" data-i18n="admin.sub">全站老师、学生、分配状态和上课时间，一屏看完。</p>
       </div>
       <button class="btn ghost" id="adminRefresh" data-i18n="admin.refresh">刷新</button>
     </div>
 
     <div class="stats" id="adminStats"></div>
 
-    <h2 class="sectitle" data-i18n="admin.pending">待分配</h2>
-    <div class="reqlist" id="adminPending"></div>
-    <p class="empty" id="adminPendingEmpty" hidden data-i18n="admin.noPending">没有待分配的申请。</p>
+    <h2 class="sectitle" data-i18n="admin.allRequests">所有申请</h2>
+    <div class="reqlist" id="adminAll"></div>
+    <p class="empty" id="adminAllEmpty" hidden data-i18n="admin.noRequests">还没有学生提交申请。</p>
 
-    <h2 class="sectitle" data-i18n="admin.assigned">已分配</h2>
-    <div class="reqlist" id="adminAssigned"></div>
-    <p class="empty" id="adminAssignedEmpty" hidden data-i18n="admin.noAssigned">还没有分配过。</p>
-
-    <h2 class="sectitle" data-i18n="admin.teachers">老师工作量</h2>
-    <div class="tags" id="adminTeacherLoad"></div>
+    <h2 class="sectitle" data-i18n="admin.allTeachers">老师与学生</h2>
+    <div class="teachergrid" id="adminTeachers"></div>
+    <p class="empty" id="adminTeachersEmpty" hidden data-i18n="admin.noTeachers">还没有老师账号。</p>
   </section>
 
   <!-- ================= 我的资料 ================= -->
@@ -429,21 +421,9 @@
 </main>
 
 <footer class="foot">
-  <p data-i18n="foot.main">知音配对 · MusicMatch — 学生、老师、管理员各司其职。</p>
-  <p class="fine" data-i18n="foot.fine">学生提交申请 · 管理员分配老师 · 联系方式只给被分配的一方</p>
+  <p data-i18n="foot.main">知音配对 · MusicMatch — 学生提申请，老师按专长来接，管理员看全局。</p>
+  <p class="fine" data-i18n="foot.fine">不排名 · 不比价 · 联系方式只给接到你的那位老师</p>
 </footer>
-
-<!-- 管理员：候选老师弹窗 -->
-<div class="modal" id="modal" hidden>
-  <div class="modalbox">
-    <h3 id="modalTitle">推荐老师</h3>
-    <p class="muted" id="modalSub">按乐器匹配、同城、预算、当前带的学生数排序。</p>
-    <div class="candlist" id="candList"></div>
-    <div class="modalactions">
-      <button class="btn ghost" id="modalCancel" data-i18n="modal.cancel">取消</button>
-    </div>
-  </div>
-</div>
 
 <div class="toast" id="toast" hidden></div>
 

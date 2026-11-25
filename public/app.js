@@ -1,4 +1,4 @@
-/* 知音配对 · 前端（三级账号：学生 / 老师 / 管理员） */
+/* 知音配对 · 前端（学生提申请 / 老师接学生 / 管理员监督） */
 (() => {
   'use strict';
 
@@ -15,9 +15,9 @@
     lastItems: null,
     stats: null,
     myRequest: null,
+    pool: null,
     students: null,
     admin: null,
-    candRequestId: null,
   };
 
   const roleLabel = (r) => (r ? t('role.' + r) : '');
@@ -71,13 +71,15 @@
       { view: 'profile', key: 'nav.profile' },
     ],
     teacher: [
-      { view: 'browse', key: 'nav.browseStudent' },
+      { view: 'pool', key: 'nav.pool', badge: 'pool' },
       { view: 'mystudents', key: 'nav.myStudents' },
+      { view: 'browse', key: 'nav.browseStudents' },
       { view: 'profile', key: 'nav.profile' },
     ],
     admin: [
-      { view: 'admin', key: 'nav.admin', badge: true },
-      { view: 'browse', key: 'nav.browseAll' },
+      { view: 'admin', key: 'nav.admin' },
+      { view: 'pool', key: 'nav.pool', badge: 'pool' },
+      { view: 'mystudents', key: 'nav.myStudents' },
       { view: 'profile', key: 'nav.profile' },
     ],
   };
@@ -98,17 +100,22 @@
   function paintBadge() {
     const badge = $('#navBadge');
     if (!badge) return;
-    const n = state.me?.counts?.pendingRequests || 0;
+    const n = state.me?.counts?.pool || 0;
     badge.hidden = n <= 0;
     badge.textContent = n;
   }
 
-  const DEFAULT_VIEW = { student: 'myrequest', teacher: 'mystudents', admin: 'admin' };
+  const DEFAULT_VIEW = { student: 'myrequest', teacher: 'pool', admin: 'admin' };
 
   // ------------------------------------------------------------------ 路由
-  const VIEWS = ['home', 'login', 'register', 'browse', 'myrequest', 'mystudents', 'admin', 'profile'];
-  const NEED_AUTH = new Set(['browse', 'myrequest', 'mystudents', 'admin', 'profile']);
-  const ROLE_OF_VIEW = { myrequest: 'student', mystudents: 'teacher', admin: 'admin' };
+  const VIEWS = ['home', 'login', 'register', 'browse', 'myrequest', 'pool', 'mystudents', 'admin', 'profile'];
+  const NEED_AUTH = new Set(['browse', 'myrequest', 'pool', 'mystudents', 'admin', 'profile']);
+  const ROLE_OF_VIEW = {
+    myrequest: 'student',
+    pool: ['teacher', 'admin'],
+    mystudents: ['teacher', 'admin'],
+    admin: 'admin',
+  };
 
   function go(view, opts = {}) {
     if (!VIEWS.includes(view)) view = 'home';
@@ -116,9 +123,10 @@
       toast(t('toast.loginFirst'));
       view = 'login';
     }
-    const needRole = ROLE_OF_VIEW[view];
-    if (needRole && state.me && state.me.role !== needRole) {
-      view = DEFAULT_VIEW[state.me.role] || 'home';
+    const need = ROLE_OF_VIEW[view];
+    if (need && state.me) {
+      const ok = Array.isArray(need) ? need.includes(state.me.role) : state.me.role === need;
+      if (!ok) view = DEFAULT_VIEW[state.me.role] || 'home';
     }
     state.view = view;
     VIEWS.forEach((v) => { $('#view-' + v).hidden = v !== view; });
@@ -128,6 +136,7 @@
     if (view === 'register' && opts.role) pickRole(opts.role);
     if (view === 'browse') loadBrowse();
     if (view === 'myrequest') loadMyRequest();
+    if (view === 'pool') loadPool();
     if (view === 'mystudents') loadMyStudents();
     if (view === 'admin') loadAdmin();
     if (view === 'profile') renderProfile();
@@ -179,6 +188,7 @@
     if (state.lastItems) renderCards(state.lastItems, state.browseRole || 'teacher');
     if (state.stats) renderStats(state.stats);
     if (state.view === 'myrequest') renderMyRequest();
+    if (state.view === 'pool') renderPool();
     if (state.view === 'mystudents') renderMyStudents();
     if (state.view === 'admin' && state.admin) renderAdmin();
     if (state.regRole) {
@@ -274,6 +284,7 @@
     try { await api('/logout', { method: 'POST' }); } catch {}
     state.me = null;
     state.myRequest = null;
+    state.pool = null;
     state.students = null;
     state.admin = null;
     paintAuth();
@@ -299,7 +310,7 @@
   // ------------------------------------------------------------------ 浏览
   function defaultBrowseRole() {
     if (state.browseRole) return state.browseRole;
-    return state.me?.role === 'teacher' ? 'student' : 'teacher';
+    return state.me?.role === 'student' ? 'teacher' : 'student';
   }
 
   async function loadBrowse() {
@@ -341,12 +352,10 @@
     (p.instruments || []).forEach((i) => tags.push(`<span class="tag">${esc(i)}</span>`));
     if (role === 'teacher') {
       if (p.levels?.length) tags.push(`<span class="tag">${esc(p.levels.map(levelLabel).join(' / '))}</span>`);
-      if (p.rate) tags.push(`<span class="tag price">${esc(t('card.rate', { n: p.rate }))}</span>`);
       if (p.years) tags.push(`<span class="tag">${esc(t('card.years', { n: p.years }))}</span>`);
     } else {
       if (p.level) tags.push(`<span class="tag">${esc(levelLabel(p.level))}</span>`);
       if (p.studentAge) tags.push(`<span class="tag">${esc(p.studentAge)}</span>`);
-      if (p.budget) tags.push(`<span class="tag price">${esc(t('card.budget', { n: p.budget }))}</span>`);
       if (p.goal) tags.push(`<span class="tag">${esc(p.goal.slice(0, 16))}</span>`);
     }
     if (p.mode) tags.push(`<span class="tag mode">${esc(modeLabel(p.mode))}</span>`);
@@ -368,7 +377,7 @@
           <b>${esc(it.name)}</b>
           <i>${esc(subtitle)}</i>
         </div>
-        <span class="role-tag">${esc(roleLabel(role))}</span>
+        <span class="role-tag">${esc(roleLabel(it.role))}</span>
       </div>
       <div class="tags">${tags.join('')}</div>
       ${bits.length ? `<p class="tagline">${bits.join(' · ')}</p>` : ''}
@@ -415,7 +424,7 @@
     const req = data.request;
     const pill = $('#reqStatus');
     pill.textContent = !req ? t('req2.noRequest')
-      : req.teacherId ? t('req2.status.assigned') : t('req2.status.pending');
+      : req.teacherId ? t('req2.status.taken') : t('req2.status.waiting');
     pill.className = 'pill' + (!req ? '' : req.teacherId ? ' ok' : ' warn');
 
     const box = $('#reqAssigned');
@@ -427,8 +436,8 @@
           <span class="avatar">${esc((data.teacher.name || '师').slice(0, 1))}</span>
           <div class="body">
             <b>${esc(data.teacher.name)}</b>
-            <span class="mini"> · ${esc(roleLabel('teacher'))}</span>
-            <div class="mini">${esc((p.instruments || []).join(' / '))}${p.rate ? ' · ' + esc(t('card.rate', { n: p.rate })) : ''}${p.mode ? ' · ' + esc(modeLabel(p.mode)) : ''}</div>
+            <span class="mini"> · ${esc(roleLabel(data.teacher.role))}</span>
+            <div class="mini">${esc((p.instruments || []).join(' / '))}${p.mode ? ' · ' + esc(modeLabel(p.mode)) : ''}${p.years ? ' · ' + esc(t('card.years', { n: p.years })) : ''}</div>
             ${p.qualifications ? `<div class="mini">${esc(p.qualifications)}</div>` : ''}
             <p class="mini">${esc(t('req.contact'))}：<span class="emailpill">${esc(data.teacher.email || '')}</span></p>
           </div>
@@ -476,7 +485,53 @@
     }
   });
 
-  // ------------------------------------------------------------------ 老师：我的学生
+  // ------------------------------------------------------------------ 申请池（老师 / 管理员）
+  async function loadPool() {
+    try {
+      const { items } = await api('/pool');
+      state.pool = items;
+      renderPool();
+      await refreshMe();
+    } catch (err) {
+      toast(errText(err), true);
+    }
+  }
+
+  function renderPool() {
+    const items = state.pool || [];
+    $('#poolCount').textContent = t('pool.count', { n: items.length });
+    $('#poolEmpty').hidden = items.length > 0;
+    $('#poolList').innerHTML = items.map((r) => `
+      <div class="req">
+        <span class="avatar">${esc((r.studentName || '学').slice(0, 1))}</span>
+        <div class="body">
+          <b>${esc(r.studentName)}</b>
+          <span class="mini"> · ${esc(r.instrument)}</span>
+          <div class="mini">${esc(r.times || t('admin.noTimes'))}</div>
+          ${r.student?.profile?.level ? `<div class="mini">${esc(t('req2.level'))}：${esc(levelLabel(r.student.profile.level))}${r.student.profile.studentAge ? ' · ' + esc(r.student.profile.studentAge) : ''}</div>` : ''}
+          ${r.note ? `<p class="msg">“${esc(r.note)}”</p>` : ''}
+          <p class="mini">${esc(t('req.contact'))}：<span class="emailpill">${esc(r.contact)}</span></p>
+        </div>
+        <div class="actions">
+          <button class="btn solid sm" data-claim="${esc(r.id)}">${esc(t('pool.claim'))}</button>
+        </div>
+      </div>`).join('');
+  }
+
+  $('#view-pool').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-claim]');
+    if (!b) return;
+    try {
+      await api('/claim', { method: 'POST', body: { requestId: b.dataset.claim } });
+      toast(t('toast.claimed'));
+      await loadPool();
+    } catch (err) {
+      toast(errText(err), true);
+      loadPool();
+    }
+  });
+
+  // ------------------------------------------------------------------ 我的学生
   async function loadMyStudents() {
     try {
       const { students } = await api('/teacher/students');
@@ -489,30 +544,46 @@
 
   function renderMyStudents() {
     const list = state.students || [];
-    const box = $('#studentList');
     $('#myStudentCount').textContent = t('my.count', { n: list.length });
     $('#studentsEmpty').hidden = list.length > 0;
-    box.innerHTML = list.map((s) => `
+    $('#studentList').innerHTML = list.map((s) => `
       <div class="req">
-        <span class="avatar">${esc((s.studentName || s.student?.name || '学').slice(0, 1))}</span>
+        <span class="avatar">${esc((s.studentName || '学').slice(0, 1))}</span>
         <div class="body">
-          <b>${esc(s.studentName || s.student?.name || '')}</b>
-          <span class="mini"> · ${esc(s.instrument || '')}</span>
+          <b>${esc(s.studentName)}</b>
+          <span class="mini"> · ${esc(s.instrument)}</span>
           <div class="mini">${esc(s.times || t('my.noTimes'))}</div>
           ${s.note ? `<p class="msg">“${esc(s.note)}”</p>` : ''}
           <p class="mini">${esc(t('req.contact'))}：<span class="emailpill">${esc(s.contact || s.studentEmail || '')}</span></p>
         </div>
+        <div class="actions">
+          <button class="btn ghost sm" data-release="${esc(s.id)}">${esc(t('my.release'))}</button>
+        </div>
       </div>`).join('');
   }
 
-  // ------------------------------------------------------------------ 管理员
+  $('#view-mystudents').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-release]');
+    if (!b) return;
+    try {
+      await api('/release', { method: 'POST', body: { requestId: b.dataset.release } });
+      toast(t('toast.released'));
+      await loadMyStudents();
+      await refreshMe();
+    } catch (err) {
+      toast(errText(err), true);
+    }
+  });
+
+  // ------------------------------------------------------------------ 管理员：全站监督
   async function loadAdmin() {
     try {
-      const [overview, list] = await Promise.all([
+      const [overview, requests, teachers] = await Promise.all([
         api('/admin/overview'),
         api('/admin/requests'),
+        api('/admin/teachers'),
       ]);
-      state.admin = { overview, items: list.items };
+      state.admin = { overview, requests: requests.items, teachers: teachers.items };
       renderAdmin();
       await refreshMe();
     } catch (err) {
@@ -523,115 +594,71 @@
   function renderAdmin() {
     const data = state.admin;
     if (!data) return;
-    const { totals, teachers } = data.overview;
+    const { totals } = data.overview;
     $('#adminStats').innerHTML = `
-      <span><b>${totals.pending}</b> ${t('admin.stat.pending')}</span>
-      <span><b>${totals.assigned}</b> ${t('admin.stat.assigned')}</span>
+      <span><b>${totals.teachers + totals.admins}</b> ${t('admin.stat.staff')}</span>
       <span><b>${totals.students}</b> ${t('admin.stat.students')}</span>
-      <span><b>${totals.teachers}</b> ${t('admin.stat.teachers')}</span>`;
+      <span><b>${totals.pending}</b> ${t('admin.stat.pending')}</span>
+      <span><b>${totals.assigned}</b> ${t('admin.stat.assigned')}</span>`;
 
-    const pending = data.items.filter((r) => !r.teacherId);
-    const assigned = data.items.filter((r) => r.teacherId);
-
-    $('#adminPendingEmpty').hidden = pending.length > 0;
-    $('#adminAssignedEmpty').hidden = assigned.length > 0;
-
-    $('#adminPending').innerHTML = pending.map((r) => `
+    $('#adminAllEmpty').hidden = data.requests.length > 0;
+    $('#adminAll').innerHTML = data.requests.map((r) => `
       <div class="req">
         <span class="avatar">${esc((r.studentName || '学').slice(0, 1))}</span>
         <div class="body">
           <b>${esc(r.studentName)}</b>
           <span class="mini"> · ${esc(r.instrument)}</span>
-          <div class="mini">${esc(r.times || t('admin.noTimes'))}</div>
-          <div class="mini">${esc(t('req.contact'))}：${esc(r.contact)}</div>
+          <div class="mini">${esc(t('req2.times'))}：${esc(r.times || t('admin.noTimes'))}</div>
+          <div class="mini">${esc(t('req.contact'))}：${esc(r.contact)}${r.student?.email && r.student.email !== r.contact ? ` · ${esc(r.student.email)}` : ''}</div>
           ${r.note ? `<p class="msg">“${esc(r.note)}”</p>` : ''}
         </div>
         <div class="actions">
-          <button class="btn solid sm" data-assign="${esc(r.id)}">${esc(t('admin.assign'))}</button>
+          ${r.teacher
+            ? `<span class="statuspill accepted">${esc(t('admin.takenBy', { name: r.teacher.name }))}</span>
+               <button class="btn ghost sm" data-release="${esc(r.id)}">${esc(t('admin.release'))}</button>`
+            : `<span class="statuspill pending">${esc(t('admin.waiting'))}</span>`}
         </div>
       </div>`).join('');
 
-    $('#adminAssigned').innerHTML = assigned.map((r) => `
-      <div class="req">
-        <span class="avatar">${esc((r.studentName || '学').slice(0, 1))}</span>
-        <div class="body">
-          <b>${esc(r.studentName)}</b>
-          <span class="mini"> · ${esc(r.instrument)}</span>
-          <div class="mini">${esc(t('admin.assignedTo', { name: r.teacher?.name || '—' }))}</div>
-          ${r.teacher?.email ? `<div class="mini">${esc(r.teacher.email)}</div>` : ''}
+    $('#adminTeachersEmpty').hidden = data.teachers.length > 0;
+    $('#adminTeachers').innerHTML = data.teachers.map((tt) => {
+      const p = tt.profile || {};
+      return `
+      <article class="tcard">
+        <div class="tcard-head">
+          <span class="avatar">${esc(tt.name.slice(0, 1))}</span>
+          <div>
+            <b>${esc(tt.name)}</b>
+            <span class="mini"> · ${esc(roleLabel(tt.role))}${tt.city ? ' · ' + esc(tt.city) : ''}</span>
+          </div>
         </div>
-        <div class="actions">
-          <button class="btn ghost sm" data-assign="${esc(r.id)}">${esc(t('admin.reassign'))}</button>
-          <button class="btn ghost sm" data-unassign="${esc(r.id)}">${esc(t('admin.unassign'))}</button>
+        <div class="mini">${esc((p.instruments || []).join(' / ') || '—')}${p.mode ? ' · ' + esc(modeLabel(p.mode)) : ''}${p.years ? ' · ' + esc(t('card.years', { n: p.years })) : ''}</div>
+        ${p.nationality || p.languages?.length ? `<div class="mini">${esc([p.nationality, (p.languages || []).join(' / ')].filter(Boolean).join(' · '))}</div>` : ''}
+        ${p.qualifications ? `<div class="mini">${esc(p.qualifications)}</div>` : ''}
+        <div class="mini"><a href="mailto:${esc(tt.email)}">${esc(tt.email)}</a></div>
+        <div class="tcard-students">
+          <b class="mini">${esc(t('admin.studentsOf', { n: tt.students.length }))}</b>
+          ${tt.students.length
+            ? tt.students.map((s) => `<div class="mini">· ${esc(s.studentName)} — ${esc(s.instrument)}${s.times ? ' · ' + esc(s.times) : ''}</div>`).join('')
+            : `<div class="mini">${esc(t('admin.noneYet'))}</div>`}
         </div>
-      </div>`).join('');
-
-    $('#adminTeacherLoad').innerHTML = teachers.map((tt) =>
-      `<span class="tag">${esc(tt.name)} · ${esc(t('admin.load', { n: tt.load }))}</span>`).join('');
+      </article>`;
+    }).join('');
   }
 
   $('#adminRefresh').addEventListener('click', () => loadAdmin());
 
   $('#view-admin').addEventListener('click', async (e) => {
-    const assignBtn = e.target.closest('[data-assign]');
-    if (assignBtn) { openCandidates(assignBtn.dataset.assign); return; }
-    const unBtn = e.target.closest('[data-unassign]');
-    if (unBtn) {
-      try {
-        await api('/admin/unassign', { method: 'POST', body: { requestId: unBtn.dataset.unassign } });
-        toast(t('toast.unassigned'));
-        loadAdmin();
-      } catch (err) { toast(errText(err), true); }
-    }
-  });
-
-  async function openCandidates(requestId) {
-    state.candRequestId = requestId;
-    const req = state.admin?.items.find((r) => r.id === requestId);
-    $('#modalTitle').textContent = t('admin.candidates', { name: req?.studentName || '' });
-    $('#modalSub').textContent = t('admin.candidates.sub');
-    $('#candList').innerHTML = `<p class="mini">${t('browse.loading')}</p>`;
-    $('#modal').hidden = false;
+    const b = e.target.closest('[data-release]');
+    if (!b) return;
     try {
-      const { candidates } = await api('/admin/candidates?requestId=' + encodeURIComponent(requestId));
-      if (!candidates.length) {
-        $('#candList').innerHTML = `<p class="mini">${esc(t('admin.noTeachers'))}</p>`;
-        return;
-      }
-      $('#candList').innerHTML = candidates.map((c, i) => `
-        <button class="cand" data-pick="${esc(c.teacher.id)}">
-          <span class="cand-rank">${i + 1}</span>
-          <span class="cand-main">
-            <b>${esc(c.teacher.name)}</b>
-            <span class="mini">${esc((c.teacher.profile.instruments || []).join(' / '))}${c.teacher.profile.rate ? ' · ¥' + c.teacher.profile.rate : ''} · ${esc(c.teacher.city || '')}</span>
-            <span class="mini">${esc(c.reasons.map((r) => t('admin.reason.' + r)).join(' · '))} · ${esc(t('admin.load', { n: c.load }))}</span>
-          </span>
-          <span class="cand-score">${c.score}</span>
-        </button>`).join('');
-    } catch (err) {
-      $('#candList').innerHTML = '';
-      toast(errText(err), true);
-    }
-  }
-
-  $('#candList').addEventListener('click', async (e) => {
-    const b = e.target.closest('[data-pick]');
-    if (!b || !state.candRequestId) return;
-    try {
-      await api('/admin/assign', {
-        method: 'POST',
-        body: { requestId: state.candRequestId, teacherId: b.dataset.pick },
-      });
-      $('#modal').hidden = true;
-      toast(t('toast.assigned'));
+      await api('/release', { method: 'POST', body: { requestId: b.dataset.release } });
+      toast(t('toast.released'));
       loadAdmin();
     } catch (err) {
       toast(errText(err), true);
     }
   });
-
-  $('#modalCancel').addEventListener('click', () => { $('#modal').hidden = true; });
-  $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') $('#modal').hidden = true; });
 
   // ------------------------------------------------------------------ 我的资料
   function teacherFieldsHTML() {
@@ -657,23 +684,21 @@
     <div class="grid2">
       <label><span>${esc(t('auth.years'))}</span>
         <input type="number" name="years" data-k="years" min="0" max="60" /></label>
-      <label><span>${esc(t('auth.rate'))}</span>
-        <input type="number" name="rate" data-k="rate" min="0" max="5000" step="10" /></label>
-    </div>
-    <div class="grid2">
       <label><span>${esc(t('auth.mode'))}</span>
         <select name="mode" data-k="mode">
           <option value="线上 + 线下">${esc(t('mode.both'))}</option>
           <option value="线下">${esc(t('mode.offline'))}</option>
           <option value="线上">${esc(t('mode.online'))}</option>
         </select></label>
+    </div>
+    <div class="grid2">
       <label><span>${esc(t('auth.styles'))}</span>
         <input name="styles" data-k="styles" placeholder="${esc(t('auth.styles.ph'))}" /></label>
+      <label><span>${esc(t('auth.education'))}</span>
+        <input name="education" data-k="education" placeholder="${esc(t('auth.education.ph'))}" /></label>
     </div>
     <label><span>${esc(t('auth.qualif'))}</span>
       <textarea name="qualifications" data-k="qualifications" rows="3" maxlength="600" placeholder="${esc(t('auth.qualif.ph'))}"></textarea></label>
-    <label><span>${esc(t('auth.education'))}</span>
-      <input name="education" data-k="education" placeholder="${esc(t('auth.education.ph'))}" /></label>
     <label><span>${esc(t('auth.intro.teacher'))}</span>
       <textarea name="intro" data-k="intro" rows="4" maxlength="1200" placeholder="${esc(t('auth.intro.teacher.ph'))}"></textarea></label>`;
   }
@@ -695,19 +720,15 @@
     <div class="grid2">
       <label><span>${esc(t('auth.studentAge'))}</span>
         <input name="studentAge" data-k="studentAge" maxlength="40" placeholder="${esc(t('auth.studentAge.ph'))}" /></label>
-      <label><span>${esc(t('auth.budget'))}</span>
-        <input type="number" name="budget" data-k="budget" min="0" max="5000" step="10" /></label>
-    </div>
-    <div class="grid2">
       <label><span>${esc(t('auth.mode'))}</span>
         <select name="mode" data-k="mode">
           <option value="线上 + 线下">${esc(t('mode.both'))}</option>
           <option value="线下">${esc(t('mode.offline'))}</option>
           <option value="线上">${esc(t('mode.online'))}</option>
         </select></label>
-      <label><span>${esc(t('auth.goal'))}</span>
-        <input name="goal" data-k="goal" maxlength="160" placeholder="${esc(t('auth.goal.ph'))}" /></label>
     </div>
+    <label><span>${esc(t('auth.goal'))}</span>
+      <input name="goal" data-k="goal" maxlength="160" placeholder="${esc(t('auth.goal.ph'))}" /></label>
     <label><span>${esc(t('auth.intro.family'))}</span>
       <textarea name="intro" data-k="intro" rows="4" maxlength="1200" placeholder="${esc(t('auth.intro.family.ph'))}"></textarea></label>`;
   }
@@ -722,8 +743,8 @@
     form.createdAt.value = fmtDate(u.createdAt);
     $('#profileRolePill').textContent = roleLabel(u.role);
 
-    $('#profileFields').innerHTML = u.role === 'teacher' ? teacherFieldsHTML()
-      : u.role === 'student' ? studentFieldsHTML() : '';
+    const staff = u.role === 'teacher' || u.role === 'admin';
+    $('#profileFields').innerHTML = staff ? teacherFieldsHTML() : studentFieldsHTML();
 
     const p = u.profile || {};
     $$('#profileFields [data-k]').forEach((el) => {

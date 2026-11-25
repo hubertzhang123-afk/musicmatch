@@ -297,20 +297,14 @@ fieldset legend { font-size: 13px; color: var(--gold); font-weight: 700; letter-
 .pill.ok { background: #e3f2ea; color: var(--ok); }
 .pill.warn { background: #fdf2dc; color: #8a5c12; }
 
-.candlist { display: flex; flex-direction: column; gap: 8px; max-height: 58vh; overflow: auto; margin-top: 12px; }
-.cand {
-  display: flex; gap: 12px; align-items: center; text-align: left; font: inherit;
-  cursor: pointer; border: 1px solid var(--line); background: #fff; border-radius: 12px;
-  padding: 10px 12px; width: 100%; transition: border-color .15s ease, background .15s ease;
+.teachergrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.tcard {
+  background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+  padding: 16px 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 4px;
 }
-.cand:hover { border-color: var(--plum); background: #faf6ff; }
-.cand-rank {
-  width: 22px; height: 22px; border-radius: 50%; background: #f1ebe1; color: var(--ink-soft);
-  display: grid; place-items: center; font-size: 12px; flex: 0 0 auto;
-}
-.cand-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.cand-main b { font-size: 14.5px; }
-.cand-score { font-weight: 700; color: var(--gold); font-size: 13px; flex: 0 0 auto; }
+.tcard-head { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; }
+.tcard .mini { color: var(--ink-soft); font-size: 12.5px; }
+.tcard-students { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 3px; }
 
 #adminStats { margin-bottom: 22px; }
 
