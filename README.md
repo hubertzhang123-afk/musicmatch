@@ -76,9 +76,11 @@ musicmatch/
 
 | 角色 | 能做什么 |
 |---|---|
-| **学生** `student` | 填**申请表**（乐器 / 上课时间 / 学生姓名 / 联系方式 / 备注），提交进管理台；被分配后能看到老师的资料和邮箱；可以随时改申请 |
-| **老师** `teacher` | 维护**作品集**（姓名、国籍、教学语言、各乐器资质、级别、课时费、授课方式、风格、院校）；看到**分配给自己**的学生的资料、时间、备注、联系方式 |
-| **管理员** `admin` | 管理台看全部申请 / 老师 / 分配情况；点「分配老师」看**排序后的候选**（乐器匹配 +100、同城 +30、预算内 +20、授课方式一致 +10、带得少 +2×剩余名额），一键分配、换人、取消分配；查看全站账号与每位老师的工作量 |
+| **学生** `student` | 填**申请表**（乐器 / 上课时间 / 学生姓名 / 联系方式 / 备注）；被老师接走后看到老师资料和邮箱；随时改申请 |
+| **老师** `teacher` | 维护**作品集**（姓名、国籍、教学语言、各乐器资质、级别、授课方式、风格、院校）；在**申请池**里按专长挑学生，一键「接这个学生」；看到名下学生的资料、时间、备注、联系方式；接错可放回池子 |
+| **管理员** `admin` | **本身也是老师**（有作品集、也能接学生）+ 全站监督：所有老师资料、所有学生申请与分配状态、每个老师名下的学生和上课时间；可把任何学生放回池子 |
+
+**没有排序、没有价格**：老师自己判断合不合适，先接先得；接走之后不会再出现在别人的池子里。
 
 管理员账号**不开放注册**，由内部创建：
 
@@ -95,30 +97,34 @@ node tools/seed-admin.mjs admin@example.com 你的密码 --local
 - **注册**：只能选学生或老师；两套资料字段完全不一样，注册后不可改
 - **登录 / 退出**：邮箱 + 密码，线上 PBKDF2-10k（Workers 10ms CPU 限制），会话 cookie（HttpOnly / Secure / 30 天）
 - **学生提单**：一张表进系统，`requests` 表里每位学生一条（`student_id` 唯一），可反复修改
-- **排序**：`/api/admin/candidates` 给每条申请排老师，返回分数和命中理由
-- **分配**：`/api/admin/assign` / `unassign`；分配后老师立刻能看到学生，学生立刻能看到老师
-- **浏览**：老师可翻学生申请、学生可翻老师资料（按乐器 / 城市 / 授课方式 / 预算 / 关键词筛）
+- **申请池**：`GET /api/pool` 列出所有还没人接的申请（老师与管理员可用）
+- **接单**：`POST /api/claim` 接走；`POST /api/release` 放回（老师放自己的，管理员放任何人的）
+- **浏览**：老师可翻学生申请、学生可翻老师资料（按乐器 / 城市 / 授课方式 / 关键词筛）
 - **我的资料**：随时改，改完立刻生效
 - **中英切换**：顶栏「中 / EN」，记住选择；界面文案与枚举翻译，用户填的内容保持原样
 
-> 旧版本「学生 ↔ 老师 互相点想认识」的自助配对已被管理员分配取代；旧表 `match_requests` 仍留在库里但不再使用。
+> 演进记录：v1 自助配对（想认识 / 同意）→ v2 管理员按分数分配 → **v3 老师按专长接单 + 管理员监督（当前）**。旧的 `match_requests` 表还留在库里但不再使用。
 
 
 ## API
 
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| GET | `/api/health` | 站点统计（公开） |
-| POST | `/api/register` | `{role, name, email, password, city, profile}`，role = `teacher` / `family` |
-| POST | `/api/login` | `{email, password}` |
-| POST | `/api/logout` | 清会话 |
-| GET | `/api/me` | 当前用户 + 待处理 / 已配对计数 |
-| PATCH | `/api/profile` | 改名字、城市、资料 |
-| GET | `/api/browse?role=teacher&instrument=钢琴&city=杭州&mode=线上&q=爵士` | 浏览 |
-| POST | `/api/requests` | `{toUserId, message}` 发起配对 |
-| GET | `/api/requests` | 收到的 / 发出的 |
-| POST | `/api/requests/:id/accept` · `/decline` | 回复（只有收到的一方能操作） |
-| DELETE | `/api/requests/:id` | 撤回自己发出的 |
+| 方法 | 路径 | 权限 | 说明 |
+|---|---|---|---|
+| GET | `/api/health` | 公开 | 站点统计 |
+| POST | `/api/register` | 公开 | `{role, name, email, password, city, profile}`，role = `teacher` / `student` |
+| POST | `/api/login` · `/api/logout` | — | 会话 |
+| GET | `/api/me` | 登录 | 当前用户 + 计数（池子 / 我的学生） |
+| PATCH | `/api/profile` | 登录 | 改名字、城市、资料（老师/管理员是作品集） |
+| GET | `/api/browse?role=teacher&instrument=钢琴&city=杭州&mode=线上&q=爵士` | 登录 | 浏览资料（无价格字段） |
+| GET | `/api/student/request` · POST 同路径 | 学生 | 读 / 提交修改自己的申请 |
+| GET | `/api/pool` | 老师 / 管理员 | 还没人接的申请 |
+| POST | `/api/claim` | 老师 / 管理员 | `{requestId}` 接走；已被接走返回 409 |
+| POST | `/api/release` | 老师 / 管理员 | `{requestId}` 放回池子（管理员可放任何人的） |
+| GET | `/api/teacher/students` | 老师 / 管理员 | 名下的学生 |
+| GET | `/api/admin/overview` | 管理员 | 总数统计 |
+| GET | `/api/admin/requests` | 管理员 | 全部申请（含学生、老师、时间） |
+| GET | `/api/admin/teachers` | 管理员 | 所有老师资料 + 各自的学生 |
+| GET | `/api/admin/users` | 管理员 | 全部账号 |
 
 ## 部署到公网
 
