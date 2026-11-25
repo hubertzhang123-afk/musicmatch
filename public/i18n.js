@@ -3,10 +3,12 @@ window.I18N = (() => {
   'use strict';
 
   const LS_KEY = 'mm_lang';
-  const SUPPORTED = ['zh', 'en'];
+  const SUPPORTED = ['zh', 'zh-Hant', 'en'];
   const listeners = new Set();
 
   const dict = {
+    'zh-Hant': window.I18N_HANT || {},
+
     zh: {
       'meta.title': '知音配对 · 学生提申请，老师来接',
       'meta.desc': '学生提交申请，老师按自己的专长挑学生；管理员由老师兼任，能看到全站资料与分配状态。',
@@ -528,7 +530,10 @@ window.I18N = (() => {
       const saved = localStorage.getItem(LS_KEY);
       if (SUPPORTED.includes(saved)) return saved;
     } catch { /* 隐私模式 */ }
-    return (navigator.language || 'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+    const nav = (navigator.language || '').toLowerCase();
+    if (/^zh-(tw|hk|mo|hant)/.test(nav)) return 'zh-Hant';
+    if (nav.startsWith('zh')) return 'zh';
+    return 'en';
   })();
 
   function t(key, vars) {
@@ -547,7 +552,7 @@ window.I18N = (() => {
     root.querySelectorAll('[data-i18n-ph]').forEach((el) => {
       el.placeholder = t(el.dataset.i18nPh);
     });
-    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang === 'zh-Hant' ? 'zh-Hant' : 'en';
     document.title = t('meta.title');
     const md = document.querySelector('meta[name="description"]');
     if (md) md.setAttribute('content', t('meta.desc'));
