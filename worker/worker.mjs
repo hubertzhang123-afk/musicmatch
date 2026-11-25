@@ -23,6 +23,7 @@ const ERR = {
   request_incomplete: '请把乐器、学生姓名、联系方式填完',
   already_taken: '这个学生已经被别的老师接走了',
   not_yours: '这不是你的学生',
+  slot_out_of_range: '时段超出范围：工作日 15:30–18:30，周末 09:00–18:00，每节课 45 分钟',
 };
 
 // ---------------------------------------------------------------- 基础工具
@@ -97,6 +98,37 @@ async function verifyPassword(password, saltHex, stored) {
   return diff === 0;
 }
 
+// ---------------------------------------------------------------- 时段规则
+// 每节课 45 分钟；工作日 15:30–18:30，周末 09:00–18:00（课必须落在窗口内）
+const LESSON_MIN = 45;
+const SLOT_WINDOW = {
+  weekday: { start: 15 * 60 + 30, end: 18 * 60 + 30 },
+  weekend: { start: 9 * 60, end: 18 * 60 },
+};
+
+const minutesOf = (t) => {
+  const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(t || ''));
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+};
+
+/** 校验并规整时段数组 [{d:1..7, t:'HH:MM'}] */
+function cleanSlots(v, max = 6) {
+  if (!Array.isArray(v)) return [];
+  const out = [];
+  for (const raw of v.slice(0, max)) {
+    const d = Number(raw && raw.d);
+    if (!(d >= 1 && d <= 7)) continue;
+    const t = str(raw && raw.t, 5);
+    const mins = minutesOf(t);
+    if (mins === null) continue;
+    const win = d <= 5 ? SLOT_WINDOW.weekday : SLOT_WINDOW.weekend;
+    if (mins < win.start || mins + LESSON_MIN > win.end) continue;
+    if (out.some((x) => x.d === d && x.t === t)) continue;
+    out.push({ d, t });
+  }
+  return out.sort((a, b) => a.d - b.d || a.t.localeCompare(b.t));
+}
+
 // ---------------------------------------------------------------- 资料清洗（无任何费用字段）
 function cleanTeacherProfile(p = {}) {
   return {
@@ -109,7 +141,7 @@ function cleanTeacherProfile(p = {}) {
     qualifications: str(p.qualifications, 600),
     nationality: str(p.nationality, 40),
     languages: listOf(p.languages, 6, 20),
-    city: str(p.city, 40),
+    slots: cleanSlots(p.slots, 8),
     intro: str(p.intro, 1200),
   };
 }
@@ -121,7 +153,6 @@ function cleanStudentProfile(p = {}) {
     studentAge: str(p.studentAge, 40),
     goal: str(p.goal, 160),
     mode: oneOf(str(p.mode, 20), MODES, '线上 + 线下'),
-    city: str(p.city, 40),
     intro: str(p.intro, 1200),
   };
 }
@@ -141,22 +172,28 @@ const rowUser = (r) => ({
 
 const publicProfile = (u) => {
   const p = u.profile || {};
-  return { id: u.id, role: u.role, name: u.name, city: u.city || p.city || '', profile: p, createdAt: u.createdAt };
+  return { id: u.id, role: u.role, name: u.name, profile: p, createdAt: u.createdAt };
 };
 
-const rowReq = (r) => ({
-  id: r.id, studentId: r.student_id, instrument: r.instrument || '', times: r.times || '',
-  studentName: r.student_name || '', contact: r.contact || '', note: r.note || '',
-  status: r.status || 'pending', teacherId: r.teacher_id || null,
-  createdAt: Number(r.created_at), updatedAt: Number(r.updated_at),
-});
+const rowReq = (r) => {
+  let slots = [];
+  try { slots = cleanSlots(JSON.parse(r.slots || '[]'), 8); } catch { slots = []; }
+  return {
+    id: r.id, studentId: r.student_id, instrument: r.instrument || '', times: r.times || '',
+    slots,
+    studentName: r.student_name || '', contact: r.contact || '', note: r.note || '',
+    status: r.status || 'pending', teacherId: r.teacher_id || null,
+    createdAt: Number(r.created_at), updatedAt: Number(r.updated_at),
+  };
+};
 
 // ---------------------------------------------------------------- D1
 let schemaReady = null;
 
 function ensureSchema(env) {
   if (!schemaReady) {
-    schemaReady = env.DB.batch([
+    schemaReady = (async () => {
+      await env.DB.batch([
       env.DB.prepare(`create table if not exists users (
         id text primary key, role text not null, name text not null, email text not null unique,
         salt text not null, hash text not null, city text, profile text not null default '{}',
@@ -166,6 +203,7 @@ function ensureSchema(env) {
         student_id text not null unique,
         instrument text not null default '',
         times text not null default '',
+        slots text not null default '[]',
         student_name text not null default '',
         contact text not null default '',
         note text not null default '',
@@ -178,7 +216,12 @@ function ensureSchema(env) {
       env.DB.prepare(`create table if not exists sessions (
         token text primary key, user_id text not null, exp integer not null)`),
       env.DB.prepare('create index if not exists idx_sess_user on sessions(user_id)'),
-    ]).catch((e) => { schemaReady = null; throw e; });
+      ]);
+      // 老库补列：已经有 slots 就会报错，忽略即可
+      try {
+        await env.DB.prepare("alter table requests add column slots text not null default '[]'").run();
+      } catch { /* 列已存在 */ }
+    })().catch((e) => { schemaReady = null; throw e; });
   }
   return schemaReady;
 }
@@ -309,12 +352,11 @@ export async function handleApi(request, env, url) {
     const profile = cleanProfile(role, body.profile || {});
     const id = uid(8);
     const createdAt = now();
-    const city = str(body.city, 40) || profile.city || '';
     await run(
       env,
       `insert into users (id, role, name, email, salt, hash, city, profile, created_at)
        values (?,?,?,?,?,?,?,?,?)`,
-      id, role, name, email, salt, hash, city, JSON.stringify(profile), createdAt
+      id, role, name, email, salt, hash, '', JSON.stringify(profile), createdAt
     );
 
     const token = uid(24);
@@ -322,7 +364,7 @@ export async function handleApi(request, env, url) {
       token, id, createdAt + SESSION_DAYS * 86400000);
 
     return json(
-      { user: publicProfile({ id, role, name, city, profile, createdAt }) },
+      { user: publicProfile({ id, role, name, profile, createdAt }) },
       201,
       { 'set-cookie': sessionCookie(token, isHttps(request)) }
     );
@@ -388,20 +430,17 @@ export async function handleApi(request, env, url) {
     if (!body) return json({ error: 'JSON 格式错误' }, 400);
 
     let name = user.name;
-    let city = user.city;
     let profile = user.profile;
     if (body.name !== undefined) {
       name = str(body.name, 40);
       if (name.length < 2) return fail(400, 'name_short');
     }
-    if (body.city !== undefined) city = str(body.city, 40);
     if (body.profile !== undefined) {
       profile = cleanProfile(user.role, body.profile);
-      if (!city) city = profile.city || '';
     }
-    await run(env, 'update users set name = ?, city = ?, profile = ? where id = ?',
-      name, city, JSON.stringify(profile), user.id);
-    return json({ user: { ...publicProfile({ ...user, name, city, profile }), email: user.email } });
+    await run(env, 'update users set name = ?, profile = ? where id = ?',
+      name, JSON.stringify(profile), user.id);
+    return json({ user: { ...publicProfile({ ...user, name, profile }), email: user.email } });
   }
 
   // ---- 浏览（老师看老师资料 / 学生看老师 / 老师看学生）----
@@ -411,7 +450,6 @@ export async function handleApi(request, env, url) {
     const role = oneOf(want, ['teacher', 'student'], user && user.role === 'student' ? 'teacher' : 'student');
     const needle = str(url.searchParams.get('q') || '', 60).toLowerCase();
     const instrument = str(url.searchParams.get('instrument') || '', 30);
-    const city = str(url.searchParams.get('city') || '', 30);
     const mode = str(url.searchParams.get('mode') || '', 20);
 
     const rows = await all(env, `select * from users where role = ? or (role = 'admin' and ? = 'teacher') order by created_at desc`, role, role);
@@ -421,13 +459,12 @@ export async function handleApi(request, env, url) {
       if (user && u.id === user.id) continue;
       const pub = publicProfile(u);
       const prof = pub.profile || {};
-      const hay = [pub.name, pub.city, prof.intro, prof.goal, prof.styles, prof.education, prof.qualifications,
+      const hay = [pub.name, prof.intro, prof.goal, prof.styles, prof.education, prof.qualifications,
         prof.nationality, (prof.languages || []).join(' '),
         (prof.instruments || []).join(' '), (prof.levels || []).join(' '), prof.level, prof.studentAge]
         .filter(Boolean).join(' ').toLowerCase();
       if (needle && !hay.includes(needle)) continue;
       if (instrument && !(prof.instruments || []).some((i) => i.toLowerCase().includes(instrument.toLowerCase()))) continue;
-      if (city && !(pub.city || '').includes(city)) continue;
       if (mode && prof.mode && prof.mode !== mode) continue;
       items.push(pub);
     }
@@ -451,25 +488,29 @@ export async function handleApi(request, env, url) {
     }
     const times = str(body.times, 200);
     const note = str(body.note, 500);
+    const slotsRaw = Array.isArray(body.slots) ? body.slots : [];
+    const slots = cleanSlots(slotsRaw, 6);
+    if (slotsRaw.length && !slots.length) return fail(400, 'slot_out_of_range');
+    const slotsJson = JSON.stringify(slots);
     const exist = await one(env, 'select * from requests where student_id = ?', user.id);
     if (exist) {
       await run(
         env,
-        `update requests set instrument = ?, times = ?, student_name = ?, contact = ?, note = ?, updated_at = ?
+        `update requests set instrument = ?, times = ?, slots = ?, student_name = ?, contact = ?, note = ?, updated_at = ?
          where student_id = ?`,
-        instrument, times, studentName, contact, note, now(), user.id
+        instrument, times, slotsJson, studentName, contact, note, now(), user.id
       );
       return json({ request: rowReq(await one(env, 'select * from requests where student_id = ?', user.id)) });
     }
     const rec = {
-      id: uid(6), studentId: user.id, instrument, times, studentName, contact, note,
+      id: uid(6), studentId: user.id, instrument, times, slots, studentName, contact, note,
       status: 'pending', teacherId: null, createdAt: now(), updatedAt: now(),
     };
     await run(
       env,
-      `insert into requests (id, student_id, instrument, times, student_name, contact, note, status, teacher_id, created_at, updated_at)
-       values (?,?,?,?,?,?,?,?,?,?,?)`,
-      rec.id, rec.studentId, rec.instrument, rec.times, rec.studentName, rec.contact, rec.note,
+      `insert into requests (id, student_id, instrument, times, slots, student_name, contact, note, status, teacher_id, created_at, updated_at)
+       values (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      rec.id, rec.studentId, rec.instrument, rec.times, slotsJson, rec.studentName, rec.contact, rec.note,
       rec.status, null, rec.createdAt, rec.updatedAt
     );
     return json({ request: rec }, 201);

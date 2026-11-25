@@ -63,6 +63,83 @@
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
   }
 
+  // ------------------------------------------------------------------ 时段选择器
+  // 规则：每节 45 分钟；工作日 15:30–18:30，周末 09:00–18:00（课必须落在窗口内）
+  const SLOT_STATE = new Map();
+  const DAY_KEYS = ['slot.d1', 'slot.d2', 'slot.d3', 'slot.d4', 'slot.d5', 'slot.d6', 'slot.d7'];
+
+  function allowedTimes(day) {
+    const weekday = day <= 5;
+    const start = weekday ? 15 * 60 + 30 : 9 * 60;
+    const end = weekday ? 18 * 60 + 30 : 18 * 60;
+    const out = [];
+    for (let m = start; m + 45 <= end; m += 30) {
+      out.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
+    }
+    return out;
+  }
+
+  function fmtSlots(slots) {
+    if (!Array.isArray(slots) || !slots.length) return '';
+    return slots.map((s) => `${t(DAY_KEYS[s.d - 1])} ${s.t}`).join(' · ');
+  }
+
+  function mountSlots(hostId, initial = [], max = 6) {
+    const box = document.getElementById(hostId);
+    if (!box) return;
+    const list = (Array.isArray(initial) ? initial : [])
+      .filter((s) => s && s.d && s.t)
+      .map((s) => ({ d: Number(s.d), t: String(s.t) }));
+    SLOT_STATE.set(hostId, list);
+    renderSlotList(hostId, max);
+  }
+
+  function renderSlotList(hostId, max) {
+    const box = document.getElementById(hostId);
+    if (!box) return;
+    const list = SLOT_STATE.get(hostId) || [];
+    box.innerHTML = '';
+    list.forEach((slot, idx) => {
+      const row = document.createElement('div');
+      row.className = 'slotrow';
+      const daySel = document.createElement('select');
+      DAY_KEYS.forEach((k, i) => daySel.add(new Option(t(k), String(i + 1))));
+      daySel.value = String(slot.d);
+      const timeSel = document.createElement('select');
+      const fillTimes = () => {
+        const opts = allowedTimes(Number(daySel.value));
+        timeSel.innerHTML = '';
+        opts.forEach((tm) => timeSel.add(new Option(tm, tm)));
+        timeSel.value = opts.includes(slot.t) ? slot.t : opts[0];
+        slot.t = timeSel.value;
+      };
+      fillTimes();
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'slot-del';
+      del.title = t('slots.remove');
+      del.textContent = '✕';
+      del.addEventListener('click', () => { list.splice(idx, 1); renderSlotList(hostId, max); });
+      daySel.addEventListener('change', () => { slot.d = Number(daySel.value); fillTimes(); });
+      timeSel.addEventListener('change', () => { slot.t = timeSel.value; });
+      row.append(daySel, timeSel, del);
+      box.appendChild(row);
+    });
+    if (list.length < max) {
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'btn ghost sm slot-add';
+      add.textContent = t('slots.add');
+      add.addEventListener('click', () => {
+        list.push({ d: 1, t: allowedTimes(1)[0] });
+        renderSlotList(hostId, max);
+      });
+      box.appendChild(add);
+    }
+  }
+
+  const readSlots = (hostId) => (SLOT_STATE.get(hostId) || []).map((s) => ({ d: s.d, t: s.t }));
+
   // ------------------------------------------------------------------ 导航
   const NAV = {
     student: [
@@ -212,6 +289,7 @@
     submit.disabled = false;
     submit.textContent = t(role === 'teacher' ? 'auth.submit.teacher' : 'auth.submit.student');
     $('#regErr').hidden = true;
+    if (role === 'teacher') mountSlots('regSlots', [], 8);
   }
 
   $('#rolepick').addEventListener('click', (e) => {
@@ -238,13 +316,14 @@
     errBox.hidden = true;
     if (!state.regRole) return;
     const fd = new FormData(form);
+    const profile = collectFields(form);
+    if (state.regRole === 'teacher') profile.slots = readSlots('regSlots');
     const body = {
       role: state.regRole,
       name: fd.get('name'),
       email: fd.get('email'),
       password: fd.get('password'),
-      city: fd.get('city'),
-      profile: collectFields(form),
+      profile,
     };
     try {
       $('#regSubmit').disabled = true;
@@ -382,7 +461,7 @@
       <div class="tags">${tags.join('')}</div>
       ${bits.length ? `<p class="tagline">${bits.join(' · ')}</p>` : ''}
       ${desc ? `<p class="desc">${desc}</p>` : `<p class="mini">${esc(t('card.noIntro'))}</p>`}
-      <div class="card-foot"><span class="mini">${esc(it.city || t('card.cityMissing'))}</span></div>
+      <div class="card-foot"><span class="mini">${esc(p.slots?.length ? t('slots.available') + '：' + fmtSlots(p.slots) : '')}</span></div>
     </article>`;
   }
 
@@ -451,11 +530,12 @@
       form.instrument.value = req.instrument || '';
       form.studentName.value = req.studentName || '';
       form.contact.value = req.contact || '';
-      form.times.value = req.times || '';
       form.note.value = req.note || '';
+      mountSlots('reqSlots', req.slots || [], 6);
       $('#reqOk').hidden = true;
-    } else if (!form.studentName.value) {
-      form.studentName.value = state.me?.name || '';
+    } else {
+      mountSlots('reqSlots', [], 6);
+      if (!form.studentName.value) form.studentName.value = state.me?.name || '';
     }
   }
 
@@ -471,7 +551,7 @@
           instrument: form.instrument.value,
           studentName: form.studentName.value,
           contact: form.contact.value,
-          times: form.times.value,
+          slots: readSlots('reqSlots'),
           note: form.note.value,
         },
       });
@@ -507,7 +587,7 @@
         <div class="body">
           <b>${esc(r.studentName)}</b>
           <span class="mini"> · ${esc(r.instrument)}</span>
-          <div class="mini">${esc(r.times || t('admin.noTimes'))}</div>
+          <div class="mini">${r.slots?.length ? esc(t('slots.wanted') + '：' + fmtSlots(r.slots)) : esc(t('admin.noTimes'))}</div>
           ${r.student?.profile?.level ? `<div class="mini">${esc(t('req2.level'))}：${esc(levelLabel(r.student.profile.level))}${r.student.profile.studentAge ? ' · ' + esc(r.student.profile.studentAge) : ''}</div>` : ''}
           ${r.note ? `<p class="msg">“${esc(r.note)}”</p>` : ''}
           <p class="mini">${esc(t('req.contact'))}：<span class="emailpill">${esc(r.contact)}</span></p>
@@ -552,7 +632,7 @@
         <div class="body">
           <b>${esc(s.studentName)}</b>
           <span class="mini"> · ${esc(s.instrument)}</span>
-          <div class="mini">${esc(s.times || t('my.noTimes'))}</div>
+          <div class="mini">${s.slots?.length ? esc(t('slots.wanted') + '：' + fmtSlots(s.slots)) : esc(t('my.noTimes'))}</div>
           ${s.note ? `<p class="msg">“${esc(s.note)}”</p>` : ''}
           <p class="mini">${esc(t('req.contact'))}：<span class="emailpill">${esc(s.contact || s.studentEmail || '')}</span></p>
         </div>
@@ -608,7 +688,7 @@
         <div class="body">
           <b>${esc(r.studentName)}</b>
           <span class="mini"> · ${esc(r.instrument)}</span>
-          <div class="mini">${esc(t('req2.times'))}：${esc(r.times || t('admin.noTimes'))}</div>
+          <div class="mini">${r.slots?.length ? esc(t('slots.wanted') + '：' + fmtSlots(r.slots)) : esc(t('admin.noTimes'))}</div>
           <div class="mini">${esc(t('req.contact'))}：${esc(r.contact)}${r.student?.email && r.student.email !== r.contact ? ` · ${esc(r.student.email)}` : ''}</div>
           ${r.note ? `<p class="msg">“${esc(r.note)}”</p>` : ''}
         </div>
@@ -629,17 +709,18 @@
           <span class="avatar">${esc(tt.name.slice(0, 1))}</span>
           <div>
             <b>${esc(tt.name)}</b>
-            <span class="mini"> · ${esc(roleLabel(tt.role))}${tt.city ? ' · ' + esc(tt.city) : ''}</span>
+            <span class="mini"> · ${esc(roleLabel(tt.role))}</span>
           </div>
         </div>
         <div class="mini">${esc((p.instruments || []).join(' / ') || '—')}${p.mode ? ' · ' + esc(modeLabel(p.mode)) : ''}${p.years ? ' · ' + esc(t('card.years', { n: p.years })) : ''}</div>
         ${p.nationality || p.languages?.length ? `<div class="mini">${esc([p.nationality, (p.languages || []).join(' / ')].filter(Boolean).join(' · '))}</div>` : ''}
+        ${p.slots?.length ? `<div class="mini">${esc(t('slots.available') + '：' + fmtSlots(p.slots))}</div>` : ''}
         ${p.qualifications ? `<div class="mini">${esc(p.qualifications)}</div>` : ''}
         <div class="mini"><a href="mailto:${esc(tt.email)}">${esc(tt.email)}</a></div>
         <div class="tcard-students">
           <b class="mini">${esc(t('admin.studentsOf', { n: tt.students.length }))}</b>
           ${tt.students.length
-            ? tt.students.map((s) => `<div class="mini">· ${esc(s.studentName)} — ${esc(s.instrument)}${s.times ? ' · ' + esc(s.times) : ''}</div>`).join('')
+            ? tt.students.map((s) => `<div class="mini">· ${esc(s.studentName)} — ${esc(s.instrument)}${s.slots?.length ? ' · ' + esc(fmtSlots(s.slots)) : ''}</div>`).join('')
             : `<div class="mini">${esc(t('admin.noneYet'))}</div>`}
         </div>
       </article>`;
@@ -697,6 +778,11 @@
       <label><span>${esc(t('auth.education'))}</span>
         <input name="education" data-k="education" placeholder="${esc(t('auth.education.ph'))}" /></label>
     </div>
+    <div class="fld-block">
+      <span class="fld-label">${esc(t('slots.teacherLabel'))}</span>
+      <p class="mini">${esc(t('slots.hint'))}</p>
+      <div class="slots" id="profSlots"></div>
+    </div>
     <label><span>${esc(t('auth.qualif'))}</span>
       <textarea name="qualifications" data-k="qualifications" rows="3" maxlength="600" placeholder="${esc(t('auth.qualif.ph'))}"></textarea></label>
     <label><span>${esc(t('auth.intro.teacher'))}</span>
@@ -738,7 +824,6 @@
     if (!u) return;
     const form = $('#profileForm');
     form.name.value = u.name || '';
-    form.city.value = u.city || '';
     form.email.value = u.email || '';
     form.createdAt.value = fmtDate(u.createdAt);
     $('#profileRolePill').textContent = roleLabel(u.role);
@@ -754,6 +839,7 @@
       if (Array.isArray(v)) v = v.join('、');
       el.value = v == null ? '' : v;
     });
+    if (staff) mountSlots('profSlots', p.slots || [], 8);
     $('#profileErr').hidden = true;
     $('#profileOk').hidden = true;
   }
@@ -766,12 +852,14 @@
     errBox.hidden = true;
     okBox.hidden = true;
     try {
+      const staff = state.me?.role === 'teacher' || state.me?.role === 'admin';
+      const profile = collectFields($('#profileFields'));
+      if (staff) profile.slots = readSlots('profSlots');
       const { user } = await api('/profile', {
         method: 'PATCH',
         body: {
           name: form.name.value,
-          city: form.city.value,
-          profile: collectFields($('#profileFields')),
+          profile,
         },
       });
       state.me = { ...state.me, ...user, email: user.email || state.me.email };

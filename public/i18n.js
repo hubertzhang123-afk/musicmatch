@@ -18,7 +18,7 @@ window.I18N = (() => {
       'nav.browseStudents': '看看学生',
       'nav.myRequest': '我的申请',
       'nav.myStudents': '我的学生',
-      'nav.pool': '学生申请',
+      'nav.pool': '可接学生',
       'nav.admin': '管理台',
       'nav.profile': '我的资料',
       'nav.login': '登录',
@@ -102,8 +102,6 @@ window.I18N = (() => {
       'auth.role.teacher.sub': '我在收学生',
       'auth.name': '名字 / 昵称',
       'auth.name.ph': '怎么称呼你',
-      'auth.city': '城市 / 地区',
-      'auth.city.ph': '例如 杭州',
 
       'auth.teacher.legend': '老师作品集',
       'auth.nationality': '国籍 / 地区',
@@ -150,8 +148,6 @@ window.I18N = (() => {
 
       'filters.instrument': '乐器',
       'filters.instrument.ph': '钢琴 / 小提琴…',
-      'filters.city': '城市',
-      'filters.city.ph': '杭州',
       'filters.mode': '授课方式',
       'filters.any': '不限',
       'filters.keyword': '关键词',
@@ -212,7 +208,6 @@ window.I18N = (() => {
       'admin.noneYet': '暂无学生',
       'admin.noTimes': '没写时间',
 
-      'card.cityMissing': '城市未填',
       'card.noIntro': '还没写介绍',
       'card.years': '教龄 {n} 年',
 
@@ -241,6 +236,20 @@ window.I18N = (() => {
       'mode.offline': '线下',
       'mode.both': '线上 + 线下',
 
+
+      'slots.teacherLabel': '可以上课的时间',
+      'slots.studentLabel': '想上课的时间',
+      'slots.hint': '工作日 15:30–18:30 · 周末 09:00–18:00 · 每节 45 分钟',
+      'slots.window': '可排时段：工作日（周一至周五）15:30–18:30，周末（周六、周日）09:00–18:00。',
+      'slots.note': '每节课 45 分钟。具体时间可由老师在与家长沟通后调整。',
+      'slots.add': '+ 添加时段',
+      'slots.remove': '删除这个时段',
+      'slots.available': '可上课时间',
+      'slots.wanted': '想上课时间',
+      'slot.d1': '周一', 'slot.d2': '周二', 'slot.d3': '周三', 'slot.d4': '周四',
+      'slot.d5': '周五', 'slot.d6': '周六', 'slot.d7': '周日',
+      'err.slot_out_of_range': '时段超出范围：工作日 15:30–18:30，周末 09:00–18:00，每节课 45 分钟',
+
       'err.role_required': '请选择身份：老师 或 学生',
       'err.name_short': '名字至少 2 个字',
       'err.email_invalid': '邮箱格式不对',
@@ -266,7 +275,7 @@ window.I18N = (() => {
       'nav.browseStudents': 'Students',
       'nav.myRequest': 'My request',
       'nav.myStudents': 'My students',
-      'nav.pool': 'Requests',
+      'nav.pool': 'Students available',
       'nav.admin': 'Admin',
       'nav.profile': 'My profile',
       'nav.login': 'Log in',
@@ -350,8 +359,6 @@ window.I18N = (() => {
       'auth.role.teacher.sub': "I'm taking students",
       'auth.name': 'Name / nickname',
       'auth.name.ph': 'What should we call you',
-      'auth.city': 'City / region',
-      'auth.city.ph': 'e.g. Hangzhou',
 
       'auth.teacher.legend': 'Teacher portfolio',
       'auth.nationality': 'Nationality / region',
@@ -398,8 +405,6 @@ window.I18N = (() => {
 
       'filters.instrument': 'Instrument',
       'filters.instrument.ph': 'Piano / violin…',
-      'filters.city': 'City',
-      'filters.city.ph': 'Hangzhou',
       'filters.mode': 'Format',
       'filters.any': 'Any',
       'filters.keyword': 'Keyword',
@@ -460,7 +465,6 @@ window.I18N = (() => {
       'admin.noneYet': 'No students yet',
       'admin.noTimes': 'no times given',
 
-      'card.cityMissing': 'City not set',
       'card.noIntro': 'No description yet',
       'card.years': '{n} yrs teaching',
 
@@ -488,6 +492,20 @@ window.I18N = (() => {
       'mode.online': 'Online',
       'mode.offline': 'In person',
       'mode.both': 'Online + in person',
+
+
+      'slots.teacherLabel': 'Times you can teach',
+      'slots.studentLabel': 'Preferred lesson times',
+      'slots.hint': 'Weekdays 15:30–18:30 · Weekends 09:00–18:00 · 45 minutes per lesson',
+      'slots.window': 'Allowed windows: Mon–Fri 15:30–18:30, Sat–Sun 09:00–18:00.',
+      'slots.note': 'Each lesson is 45 minutes. Exact times can be adjusted by the teacher after talking with the parent.',
+      'slots.add': '+ Add a slot',
+      'slots.remove': 'Remove this slot',
+      'slots.available': 'Available',
+      'slots.wanted': 'Requested',
+      'slot.d1': 'Mon', 'slot.d2': 'Tue', 'slot.d3': 'Wed', 'slot.d4': 'Thu',
+      'slot.d5': 'Fri', 'slot.d6': 'Sat', 'slot.d7': 'Sun',
+      'err.slot_out_of_range': 'Outside the allowed windows: weekdays 15:30–18:30, weekends 09:00–18:00, 45 minutes per lesson',
 
       'err.role_required': 'Pick a role: teacher, or student',
       'err.name_short': 'Name needs at least 2 characters',

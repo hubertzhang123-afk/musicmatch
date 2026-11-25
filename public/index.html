@@ -108,6 +108,8 @@
         <li><b data-i18n="how.s3.t">3 · 老师接学生</b><span data-i18n="how.s3.d">点一下归你，别人看不到了；接错了可以放回去。</span></li>
         <li><b data-i18n="how.s4.t">4 · 管理员看全局</b><span data-i18n="how.s4.d">所有老师、学生、分配状态和上课时间，一屏看清。</span></li>
       </ol>
+      <p class="mini slotnote" data-i18n="slots.note">每节课 45 分钟。具体时间可由老师在与家长沟通后调整。</p>
+      <p class="mini slotnote" data-i18n="slots.window">可排时段：工作日（周一至周五）15:30–18:30，周末（周六、周日）09:00–18:00。</p>
     </div>
 
     <div class="cta">
@@ -159,14 +161,9 @@
         </div>
 
         <form id="registerForm" class="form" autocomplete="on" hidden>
-          <div class="grid2">
-            <label><span data-i18n="auth.name">名字 / 昵称</span>
-              <input name="name" required minlength="2" maxlength="40" data-i18n-ph="auth.name.ph" placeholder="怎么称呼你" />
-            </label>
-            <label><span data-i18n="auth.city">城市 / 地区</span>
-              <input name="city" maxlength="40" list="cityOptions" data-i18n-ph="auth.city.ph" placeholder="例如 杭州" />
-            </label>
-          </div>
+          <label><span data-i18n="auth.name">名字 / 昵称</span>
+            <input name="name" required minlength="2" maxlength="40" data-i18n-ph="auth.name.ph" placeholder="怎么称呼你" />
+          </label>
           <div class="grid2">
             <label><span data-i18n="auth.email">邮箱</span>
               <input type="email" name="email" required data-i18n-ph="auth.email.ph2" placeholder="用来登录" />
@@ -211,6 +208,11 @@
                 <option value="线上" data-i18n="mode.online">线上</option>
               </select>
             </label>
+            <div class="fld-block">
+              <span class="fld-label" data-i18n="slots.teacherLabel">可以上课的时间</span>
+              <p class="mini" data-i18n="slots.hint">工作日 15:30–18:30 · 周末 09:00–18:00 · 每节 45 分钟</p>
+              <div class="slots" id="regSlots"></div>
+            </div>
             <label><span data-i18n="auth.qualif">各乐器资质</span>
               <textarea name="qualifications" data-k="qualifications" rows="3" maxlength="600" data-i18n-ph="auth.qualif.ph" placeholder="例：钢琴 ABRSM 八级；乐理 上音硕士"></textarea>
             </label>
@@ -286,7 +288,6 @@
 
     <form class="filters" id="filterForm">
       <label class="fld"><span data-i18n="filters.instrument">乐器</span><input name="instrument" data-i18n-ph="filters.instrument.ph" placeholder="钢琴 / 小提琴…" /></label>
-      <label class="fld"><span data-i18n="filters.city">城市</span><input name="city" list="cityOptions" data-i18n-ph="filters.city.ph" placeholder="杭州" /></label>
       <label class="fld"><span data-i18n="filters.mode">授课方式</span>
         <select name="mode">
           <option value="" data-i18n="filters.any">不限</option>
@@ -328,13 +329,14 @@
           <input name="studentName" maxlength="40" data-i18n-ph="req2.studentName.ph" placeholder="孩子 / 本人姓名" />
         </label>
       </div>
-      <div class="grid2">
-        <label><span data-i18n="req2.contact">联系方式</span>
-          <input name="contact" required minlength="3" maxlength="120" data-i18n-ph="req2.contact.ph" placeholder="手机 / 微信 / 邮箱" />
-        </label>
-        <label><span data-i18n="req2.times">方便的上课时间</span>
-          <input name="times" maxlength="200" data-i18n-ph="req2.times.ph" placeholder="周六上午、工作日 19 点后" />
-        </label>
+      <label><span data-i18n="req2.contact">联系方式</span>
+        <input name="contact" required minlength="3" maxlength="120" data-i18n-ph="req2.contact.ph" placeholder="手机 / 微信 / 邮箱" />
+      </label>
+      <div class="fld-block">
+        <span class="fld-label" data-i18n="slots.studentLabel">想上课的时间</span>
+        <p class="mini" data-i18n="slots.hint">工作日 15:30–18:30 · 周末 09:00–18:00 · 每节 45 分钟</p>
+        <div class="slots" id="reqSlots"></div>
+        <p class="mini slotnote" data-i18n="slots.note">每节课 45 分钟。具体时间可由老师在与家长沟通后调整。</p>
       </div>
       <label><span data-i18n="req2.note">备注</span>
         <textarea name="note" rows="3" maxlength="500" data-i18n-ph="req2.note.ph" placeholder="目标、基础、家里有没有琴…"></textarea>
@@ -403,10 +405,7 @@
     </div>
 
     <form class="form cardform" id="profileForm">
-      <div class="grid2">
-        <label><span data-i18n="auth.name">名字 / 昵称</span><input name="name" required minlength="2" maxlength="40" /></label>
-        <label><span data-i18n="auth.city">城市 / 地区</span><input name="city" maxlength="40" list="cityOptions" /></label>
-      </div>
+      <label><span data-i18n="auth.name">名字 / 昵称</span><input name="name" required minlength="2" maxlength="40" /></label>
       <div class="grid2">
         <label><span data-i18n="profile.emailLocked">邮箱（登录用，不可改）</span><input name="email" disabled /></label>
         <label><span data-i18n="profile.created">注册时间</span><input name="createdAt" disabled /></label>
@@ -426,29 +425,6 @@
 </footer>
 
 <div class="toast" id="toast" hidden></div>
-
-<!-- 城市候选 -->
-<datalist id="cityOptions">
-  <option value="北京"></option><option value="上海"></option><option value="广州"></option>
-  <option value="深圳"></option><option value="杭州"></option><option value="南京"></option>
-  <option value="苏州"></option><option value="成都"></option><option value="重庆"></option>
-  <option value="武汉"></option><option value="西安"></option><option value="天津"></option>
-  <option value="青岛"></option><option value="厦门"></option><option value="长沙"></option>
-  <option value="郑州"></option><option value="合肥"></option><option value="济南"></option>
-  <option value="沈阳"></option><option value="大连"></option><option value="福州"></option>
-  <option value="昆明"></option><option value="南昌"></option><option value="南宁"></option>
-  <option value="贵阳"></option><option value="哈尔滨"></option><option value="长春"></option>
-  <option value="石家庄"></option><option value="太原"></option><option value="兰州"></option>
-  <option value="乌鲁木齐"></option><option value="呼和浩特"></option><option value="银川"></option>
-  <option value="西宁"></option><option value="拉萨"></option><option value="海口"></option>
-  <option value="三亚"></option><option value="宁波"></option><option value="无锡"></option>
-  <option value="佛山"></option><option value="东莞"></option><option value="珠海"></option>
-  <option value="中山"></option><option value="温州"></option><option value="常州"></option>
-  <option value="香港"></option><option value="澳门"></option><option value="台湾"></option>
-  <option value="台北"></option><option value="新北"></option><option value="桃园"></option>
-  <option value="台中"></option><option value="台南"></option><option value="高雄"></option>
-  <option value="新竹"></option><option value="基隆"></option><option value="嘉义"></option>
-</datalist>
 
 <script src="/i18n.js"></script>
 <script src="/app.js"></script>
