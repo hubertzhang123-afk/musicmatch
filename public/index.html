@@ -4,9 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>知音配对 · 找一位合适的音乐老师</title>
-<meta name="description" content="知音配对：学生 / 家长 与音乐老师互相配对。" />
+<meta name="description" content="知音配对：学生提单 → 系统排序 → 管理员分配老师。" />
 <meta property="og:title" content="知音配对 · MusicMatch" />
-<meta property="og:description" content="学生 / 家长 ↔ 音乐老师，双向选择。免费注册，两种身份。" />
+<meta property="og:description" content="学生提交申请表，管理员按乐器、城市、预算排序后分配老师。" />
 <meta property="og:type" content="website" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234b2e5e'/%3E%3Cpath d='M13 23V10l10-2v13' stroke='%23f2c14e' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='10.5' cy='23' r='3' fill='%23f2c14e'/%3E%3Ccircle cx='20.5' cy='21' r='3' fill='%23f2c14e'/%3E%3C/svg%3E" />
 <link rel="stylesheet" href="/styles.css" />
@@ -26,13 +26,7 @@
     </span>
   </a>
 
-  <nav class="topnav" id="topnav">
-    <button data-go="browse" class="navlink"><span data-i18n="nav.browse">找配对</span></button>
-    <button data-go="requests" class="navlink" id="navRequests">
-      <span data-i18n="nav.requests">我的配对</span><span class="badge" id="reqBadge" hidden>0</span>
-    </button>
-    <button data-go="profile" class="navlink"><span data-i18n="nav.profile">我的资料</span></button>
-  </nav>
+  <nav class="topnav" id="topnav" hidden></nav>
 
   <div class="langswitch" id="langswitch" role="group" aria-label="Language">
     <button type="button" data-lang="zh" aria-pressed="true">中</button>
@@ -61,59 +55,64 @@
         <span data-i18n="home.title.a">找到那位</span><span class="hl" data-i18n="home.title.hl">听得懂你</span><span data-i18n="home.title.b">的音乐老师</span>
       </h1>
       <p class="lead">
-        <span data-i18n="home.lead1">这里不讲排名，只讲合不合适。</span><br />
-        <span data-i18n="home.lead2">老师写清自己怎么教，学生和家长写清自己想学什么 —— 双方都看得见，看顺眼了再互相点一次「想认识」。</span>
+        <span data-i18n="home.lead1">学生填一张申请表，其它交给系统和分配老师。</span><br />
+        <span data-i18n="home.lead2">按乐器、城市、预算排好序，管理员把最合适的老师分配给你；老师也能看到你的时间安排和联系方式。</span>
       </p>
       <div class="hero-actions">
-        <button class="btn solid big" data-go="register" data-role="family" data-i18n="home.cta.family">我是学生 / 家长</button>
+        <button class="btn solid big" data-go="register" data-role="student" data-i18n="home.cta.student">我是学生</button>
         <button class="btn outline big" data-go="register" data-role="teacher" data-i18n="home.cta.teacher">我是音乐老师</button>
       </div>
       <div class="stats" id="homeStats"></div>
     </div>
 
-    <div class="roles">
-      <article class="rolecard fam">
-        <div class="rc-head">
-          <span class="rc-icon">🎧</span>
-          <h2 data-i18n="role.family.card.title">家长 / 学生</h2>
-        </div>
+    <div class="roles roles3">
+      <article class="rolecard stu">
+        <div class="rc-head"><span class="rc-icon">🎧</span><h2 data-i18n="role.student.card.title">学生</h2></div>
         <ul>
-          <li data-i18n="role.family.b1">写下想学的乐器、现在的水平和目标</li>
-          <li data-i18n="role.family.b2">填预算和上课方式（线上 / 线下 / 都行）</li>
-          <li data-i18n="role.family.b3">浏览正在收学生的老师，按乐器、城市、课时费筛</li>
-          <li data-i18n="role.family.b4">老师回你之后，双方才看到联系方式</li>
+          <li data-i18n="role.student.b1">填一张申请表：想学什么、什么时间方便、怎么联系</li>
+          <li data-i18n="role.student.b2">提交后进入管理台，按乐器 / 城市 / 预算自动排序</li>
+          <li data-i18n="role.student.b3">被分配后能看到老师的资料和联系方式</li>
+          <li data-i18n="role.student.b4">随时修改申请，老师那边同步更新</li>
         </ul>
-        <button class="btn solid wide" data-go="register" data-role="family" data-i18n="role.family.cta">创建学生账号</button>
+        <button class="btn solid wide" data-go="register" data-role="student" data-i18n="role.student.cta">创建学生账号</button>
       </article>
 
       <article class="rolecard tea">
-        <div class="rc-head">
-          <span class="rc-icon">🎼</span>
-          <h2 data-i18n="role.teacher.card.title">音乐老师</h2>
-        </div>
+        <div class="rc-head"><span class="rc-icon">🎼</span><h2 data-i18n="role.teacher.card.title">音乐老师</h2></div>
         <ul>
-          <li data-i18n="role.teacher.b1">写清教的乐器、可教级别、教龄和资质</li>
-          <li data-i18n="role.teacher.b2">定课时费和授课方式，学生先看得见再决定</li>
-          <li data-i18n="role.teacher.b3">浏览附近正在找老师的学生需求</li>
-          <li data-i18n="role.teacher.b4">你同意之后，才会把联系方式交出去</li>
+          <li data-i18n="role.teacher.b1">做自己的作品集：姓名、国籍、教学语言、各乐器资质</li>
+          <li data-i18n="role.teacher.b2">定课时费、授课方式、可教级别和风格</li>
+          <li data-i18n="role.teacher.b3">被分配后直接看到学生的资料和联系方式</li>
+          <li data-i18n="role.teacher.b4">学生的时间安排和备注都在「我的学生」里</li>
         </ul>
         <button class="btn solid wide" data-go="register" data-role="teacher" data-i18n="role.teacher.cta">创建老师账号</button>
+      </article>
+
+      <article class="rolecard adm">
+        <div class="rc-head"><span class="rc-icon">🗂</span><h2 data-i18n="role.admin.card.title">管理员</h2></div>
+        <ul>
+          <li data-i18n="role.admin.b1">一屏看到所有申请、老师和分配情况</li>
+          <li data-i18n="role.admin.b2">系统按乐器匹配 / 同城 / 预算 / 现有学生数给出排序</li>
+          <li data-i18n="role.admin.b3">点一下把老师分配给某个学生，随时可以换人或撤回</li>
+          <li data-i18n="role.admin.b4">能看到全站账号和每个老师带了几个人</li>
+        </ul>
+        <p class="mini" data-i18n="role.admin.note">管理员账号由站点内部开设，不开放注册。</p>
       </article>
     </div>
 
     <div class="how">
-      <h2 data-i18n="how.title">怎么个配对法</h2>
+      <h2 data-i18n="how.title">怎么个流程</h2>
       <ol class="steps">
-        <li><b data-i18n="how.s1.t">1 · 选身份</b><span data-i18n="how.s1.d">老师，或者家长 / 学生。一个账号只用一种，资料字段完全不一样。</span></li>
-        <li><b data-i18n="how.s2.t">2 · 填资料</b><span data-i18n="how.s2.d">乐器、级别、预算或课时费、城市、授课方式。填得越具体，越容易被对上。</span></li>
-        <li><b data-i18n="how.s3.t">3 · 点「想认识」</b><span data-i18n="how.s3.d">只能一位老师配一位学生，所以先看资料再动手，别群发。</span></li>
-        <li><b data-i18n="how.s4.t">4 · 双方同意才见面</b><span data-i18n="how.s4.d">对方同意，两个人才互相看到邮箱；拒绝也不会通知得太难看。</span></li>
+        <li><b data-i18n="how.s1.t">1 · 学生提申请</b><span data-i18n="how.s1.d">乐器、上课时间、学生姓名、联系方式，一张表交给系统。</span></li>
+        <li><b data-i18n="how.s2.t">2 · 系统排序</b><span data-i18n="how.s2.d">乐器命中、同城、预算内、授课方式一致、目前带得少，都会加分。</span></li>
+        <li><b data-i18n="how.s3.t">3 · 管理员分配</b><span data-i18n="how.s3.d">看着排序结果点一下，不合适就换人，也可以取消重来。</span></li>
+        <li><b data-i18n="how.s4.t">4 · 双方看到彼此</b><span data-i18n="how.s4.d">老师看到学生的时间与联系方式，学生看到老师的资料与联系方式。</span></li>
       </ol>
     </div>
 
     <div class="cta">
       <h2 data-i18n="cta.title">先注册，再慢慢挑</h2>
-      <p data-i18n="cta.sub">免费、不用手机号。想换身份？换个邮箱再注册一个就好。</p>
+      <p data-i18n="cta.sub">免费、不用手机号。学生和老师同一个入口。</p>
       <button class="btn solid big" data-go="register" data-i18n="cta.btn">现在开始</button>
     </div>
   </section>
@@ -123,7 +122,7 @@
     <div class="authwrap">
       <div class="authcard">
         <h1 data-i18n="auth.login.title">欢迎回来</h1>
-        <p class="muted" data-i18n="auth.login.sub">登录后可以看配对请求、改资料。</p>
+        <p class="muted" data-i18n="auth.login.sub">学生看申请、老师看学生、管理员看管理台。</p>
         <form id="loginForm" class="form" autocomplete="on">
           <label><span data-i18n="auth.email">邮箱</span>
             <input type="email" name="email" required data-i18n-ph="auth.email.ph" placeholder="you@example.com" />
@@ -147,10 +146,10 @@
         <p class="muted" data-i18n="auth.reg.sub">先选身份 —— 这一步决定你之后要填哪些资料，注册后不能改。</p>
 
         <div class="rolepick" id="rolepick">
-          <button type="button" class="roleopt" data-role="family">
+          <button type="button" class="roleopt" data-role="student">
             <span class="ro-icon">🎧</span>
-            <b data-i18n="auth.role.family">家长 / 学生</b>
-            <small data-i18n="auth.role.family.sub">我要找老师</small>
+            <b data-i18n="auth.role.student">学生</b>
+            <small data-i18n="auth.role.student.sub">我要找老师</small>
           </button>
           <button type="button" class="roleopt" data-role="teacher">
             <span class="ro-icon">🎼</span>
@@ -164,22 +163,30 @@
             <label><span data-i18n="auth.name">名字 / 昵称</span>
               <input name="name" required minlength="2" maxlength="40" data-i18n-ph="auth.name.ph" placeholder="怎么称呼你" />
             </label>
-            <label><span data-i18n="auth.city">城市</span>
+            <label><span data-i18n="auth.city">城市 / 地区</span>
               <input name="city" maxlength="40" list="cityOptions" data-i18n-ph="auth.city.ph" placeholder="例如 杭州" />
             </label>
           </div>
           <div class="grid2">
             <label><span data-i18n="auth.email">邮箱</span>
-              <input type="email" name="email" required data-i18n-ph="auth.email.ph2" placeholder="用来登录，也只对你同意的人可见" />
+              <input type="email" name="email" required data-i18n-ph="auth.email.ph2" placeholder="用来登录" />
             </label>
             <label><span data-i18n="auth.password">密码</span>
               <input type="password" name="password" required minlength="8" data-i18n-ph="auth.password.ph" placeholder="至少 8 位" />
             </label>
           </div>
 
-          <!-- 老师专属 -->
+          <!-- 老师作品集 -->
           <fieldset class="rolefields" data-for="teacher" hidden>
-            <legend data-i18n="auth.teacher.legend">老师的资料</legend>
+            <legend data-i18n="auth.teacher.legend">老师作品集</legend>
+            <div class="grid2">
+              <label><span data-i18n="auth.nationality">国籍 / 地区</span>
+                <input name="nationality" data-k="nationality" maxlength="40" data-i18n-ph="auth.nationality.ph" placeholder="例如 中国" />
+              </label>
+              <label><span data-i18n="auth.languages">教学语言</span>
+                <input name="languages" data-k="languages" data-i18n-ph="auth.languages.ph" placeholder="中文、英语" />
+              </label>
+            </div>
             <label><span data-i18n="auth.instruments.teacher">教的乐器（可多个，逗号分隔）</span>
               <input name="instruments" data-k="instruments" data-i18n-ph="auth.instruments.teacher.ph" placeholder="钢琴、乐理" />
             </label>
@@ -209,24 +216,27 @@
                 </select>
               </label>
             </div>
+            <label><span data-i18n="auth.qualif">各乐器资质</span>
+              <textarea name="qualifications" data-k="qualifications" rows="3" maxlength="600" data-i18n-ph="auth.qualif.ph" placeholder="例：钢琴 ABRSM 八级；乐理 上音硕士"></textarea>
+            </label>
             <label><span data-i18n="auth.styles">风格 / 流派</span>
               <input name="styles" data-k="styles" data-i18n-ph="auth.styles.ph" placeholder="古典、流行、爵士…" />
             </label>
-            <label><span data-i18n="auth.education">院校 / 资质</span>
-              <input name="education" data-k="education" data-i18n-ph="auth.education.ph" placeholder="例：上音钢琴表演，十级，教龄 8 年" />
+            <label><span data-i18n="auth.education">院校</span>
+              <input name="education" data-k="education" data-i18n-ph="auth.education.ph" placeholder="例：上音钢琴表演" />
             </label>
             <label><span data-i18n="auth.intro.teacher">介绍一下你的课</span>
-              <textarea name="intro" data-k="intro" rows="4" maxlength="1200" data-i18n-ph="auth.intro.teacher.ph" placeholder="你怎么带零基础的学生？一节课大概什么节奏？"></textarea>
+              <textarea name="intro" data-k="intro" rows="3" maxlength="1200" data-i18n-ph="auth.intro.teacher.ph" placeholder="你怎么带零基础的学生？"></textarea>
             </label>
           </fieldset>
 
-          <!-- 家长 / 学生专属 -->
-          <fieldset class="rolefields" data-for="family" hidden>
-            <legend data-i18n="auth.family.legend">学生 / 家长的资料</legend>
-            <label><span data-i18n="auth.instruments.family">想学的乐器（可多个，逗号分隔）</span>
-              <input name="instruments" data-k="instruments" data-i18n-ph="auth.instruments.family.ph" placeholder="钢琴、乐理" />
-            </label>
+          <!-- 学生资料 -->
+          <fieldset class="rolefields" data-for="student" hidden>
+            <legend data-i18n="auth.student.legend">学生资料</legend>
             <div class="grid2">
+              <label><span data-i18n="auth.instruments.family">想学的乐器（可多个，逗号分隔）</span>
+                <input name="instruments" data-k="instruments" data-i18n-ph="auth.instruments.family.ph" placeholder="钢琴、乐理" />
+              </label>
               <label><span data-i18n="auth.level">现在的水平</span>
                 <select name="level" data-k="level">
                   <option value="零基础" data-i18n="level.zero">零基础</option>
@@ -236,14 +246,16 @@
                   <option value="艺考 / 专业" data-i18n="level.pro">艺考 / 专业</option>
                 </select>
               </label>
-              <label><span data-i18n="auth.studentAge">学生年龄</span>
-                <input name="studentAge" data-k="studentAge" maxlength="40" data-i18n-ph="auth.studentAge.ph" placeholder="8 岁 / 成人 / 初二" />
-              </label>
             </div>
             <div class="grid2">
+              <label><span data-i18n="auth.studentAge">学生年龄</span>
+                <input name="studentAge" data-k="studentAge" maxlength="40" data-i18n-ph="auth.studentAge.ph" placeholder="8 岁 / 成人" />
+              </label>
               <label><span data-i18n="auth.budget">预算（元 / 课时）</span>
                 <input type="number" name="budget" data-k="budget" min="0" max="5000" step="10" placeholder="200" />
               </label>
+            </div>
+            <div class="grid2">
               <label><span data-i18n="auth.mode">授课方式</span>
                 <select name="mode" data-k="mode">
                   <option value="线上 + 线下" data-i18n="mode.both">线上 + 线下</option>
@@ -251,12 +263,12 @@
                   <option value="线上" data-i18n="mode.online">线上</option>
                 </select>
               </label>
+              <label><span data-i18n="auth.goal">目标 / 诉求</span>
+                <input name="goal" data-k="goal" maxlength="160" data-i18n-ph="auth.goal.ph" placeholder="考级、兴趣…" />
+              </label>
             </div>
-            <label><span data-i18n="auth.goal">目标 / 诉求</span>
-              <input name="goal" data-k="goal" maxlength="160" data-i18n-ph="auth.goal.ph" placeholder="考级、兴趣、想弹一首喜欢的曲子…" />
-            </label>
             <label><span data-i18n="auth.intro.family">补充说明</span>
-              <textarea name="intro" data-k="intro" rows="4" maxlength="1200" data-i18n-ph="auth.intro.family.ph" placeholder="家里有琴吗？每周能练多久？希望老师什么风格？"></textarea>
+              <textarea name="intro" data-k="intro" rows="3" maxlength="1200" data-i18n-ph="auth.intro.family.ph" placeholder="家里有琴吗？每周能练多久？"></textarea>
             </label>
           </fieldset>
 
@@ -269,16 +281,16 @@
     </div>
   </section>
 
-  <!-- ================= 找配对 ================= -->
+  <!-- ================= 浏览 ================= -->
   <section class="view" id="view-browse" hidden>
     <div class="pagehead">
       <div>
         <h1 id="browseTitle" data-i18n="browse.title.teacher">找一位音乐老师</h1>
-        <p class="muted" id="browseSub" data-i18n="browse.sub.teacher">按乐器、城市、课时费筛一筛，看到合适的就点「想认识」。</p>
+        <p class="muted" id="browseSub" data-i18n="browse.sub.teacher">按乐器、城市、课时费筛一筛。</p>
       </div>
       <div class="segment" id="browseSwitch">
         <button data-role="teacher" data-i18n="browse.tab.teacher">看老师</button>
-        <button data-role="family" data-i18n="browse.tab.family">看学生需求</button>
+        <button data-role="student" data-i18n="browse.tab.student">看学生</button>
       </div>
     </div>
 
@@ -307,25 +319,85 @@
     </form>
 
     <div class="cards" id="cards"></div>
-    <p class="empty" id="cardsEmpty" hidden data-i18n="browse.empty">这里还没有符合条件的资料。换个筛选条件，或者过会儿再来看看。</p>
+    <p class="empty" id="cardsEmpty" hidden data-i18n="browse.empty">这里还没有符合条件的资料。</p>
   </section>
 
-  <!-- ================= 我的配对 ================= -->
-  <section class="view" id="view-requests" hidden>
+  <!-- ================= 学生：我的申请 ================= -->
+  <section class="view" id="view-myrequest" hidden>
     <div class="pagehead">
       <div>
-        <h1 data-i18n="req.title">我的配对</h1>
-        <p class="muted" data-i18n="req.sub">对方同意之后，两个人的邮箱才会互相出现。</p>
+        <h1 data-i18n="req2.title">我的申请</h1>
+        <p class="muted" data-i18n="req2.sub">填好交给管理台，管理员按乐器、城市、预算排序后分配老师。</p>
       </div>
+      <span class="pill" id="reqStatus">—</span>
     </div>
 
-    <h2 class="sectitle" data-i18n="req.incoming">收到的请求</h2>
-    <div class="reqlist" id="incoming"></div>
-    <p class="empty" id="incomingEmpty" hidden data-i18n="req.incoming.empty">还没有人给你发请求。</p>
+    <div class="assignbox" id="reqAssigned" hidden>
+      <h2 class="sectitle" data-i18n="req2.assignedTitle">你的老师</h2>
+      <div id="reqTeacherCard"></div>
+    </div>
 
-    <h2 class="sectitle" data-i18n="req.outgoing">我发出的请求</h2>
-    <div class="reqlist" id="outgoing"></div>
-    <p class="empty" id="outgoingEmpty" hidden data-i18n="req.outgoing.empty">你还没主动找过谁。</p>
+    <form class="form cardform" id="requestForm">
+      <div class="grid2">
+        <label><span data-i18n="req2.instrument">想学的乐器</span>
+          <input name="instrument" required minlength="2" maxlength="60" data-i18n-ph="req2.instrument.ph" placeholder="钢琴 / 小提琴…" />
+        </label>
+        <label><span data-i18n="req2.studentName">学生姓名</span>
+          <input name="studentName" maxlength="40" data-i18n-ph="req2.studentName.ph" placeholder="孩子 / 本人姓名" />
+        </label>
+      </div>
+      <div class="grid2">
+        <label><span data-i18n="req2.contact">联系方式</span>
+          <input name="contact" required minlength="3" maxlength="120" data-i18n-ph="req2.contact.ph" placeholder="手机 / 微信 / 邮箱" />
+        </label>
+        <label><span data-i18n="req2.times">方便的上课时间</span>
+          <input name="times" maxlength="200" data-i18n-ph="req2.times.ph" placeholder="周六上午、工作日 19 点后" />
+        </label>
+      </div>
+      <label><span data-i18n="req2.note">备注</span>
+        <textarea name="note" rows="3" maxlength="500" data-i18n-ph="req2.note.ph" placeholder="目标、基础、家里有没有琴…"></textarea>
+      </label>
+      <button class="btn solid" type="submit" data-i18n="req2.submit">提交申请</button>
+      <p class="formok" id="reqOk" hidden data-i18n="req2.saved">已提交 ✓</p>
+      <p class="formerr" id="reqErr" hidden></p>
+    </form>
+  </section>
+
+  <!-- ================= 老师：我的学生 ================= -->
+  <section class="view" id="view-mystudents" hidden>
+    <div class="pagehead">
+      <div>
+        <h1 data-i18n="my.title">我的学生</h1>
+        <p class="muted" data-i18n="my.sub">管理员分配给你的学生都在这里。</p>
+      </div>
+      <span class="pill" id="myStudentCount">—</span>
+    </div>
+    <div class="reqlist" id="studentList"></div>
+    <p class="empty" id="studentsEmpty" hidden data-i18n="my.empty">还没有学生被分配给你。</p>
+  </section>
+
+  <!-- ================= 管理员：管理台 ================= -->
+  <section class="view" id="view-admin" hidden>
+    <div class="pagehead">
+      <div>
+        <h1 data-i18n="admin.title">管理台</h1>
+        <p class="muted" data-i18n="admin.sub">所有申请、老师和分配情况一屏看完。</p>
+      </div>
+      <button class="btn ghost" id="adminRefresh" data-i18n="admin.refresh">刷新</button>
+    </div>
+
+    <div class="stats" id="adminStats"></div>
+
+    <h2 class="sectitle" data-i18n="admin.pending">待分配</h2>
+    <div class="reqlist" id="adminPending"></div>
+    <p class="empty" id="adminPendingEmpty" hidden data-i18n="admin.noPending">没有待分配的申请。</p>
+
+    <h2 class="sectitle" data-i18n="admin.assigned">已分配</h2>
+    <div class="reqlist" id="adminAssigned"></div>
+    <p class="empty" id="adminAssignedEmpty" hidden data-i18n="admin.noAssigned">还没有分配过。</p>
+
+    <h2 class="sectitle" data-i18n="admin.teachers">老师工作量</h2>
+    <div class="tags" id="adminTeacherLoad"></div>
   </section>
 
   <!-- ================= 我的资料 ================= -->
@@ -333,7 +405,7 @@
     <div class="pagehead">
       <div>
         <h1 data-i18n="profile.title">我的资料</h1>
-        <p class="muted" data-i18n="profile.sub">资料越具体，越容易被对的人找到。</p>
+        <p class="muted" data-i18n="profile.sub">资料越具体，越容易被选中。</p>
       </div>
       <span class="pill" id="profileRolePill">—</span>
     </div>
@@ -341,7 +413,7 @@
     <form class="form cardform" id="profileForm">
       <div class="grid2">
         <label><span data-i18n="auth.name">名字 / 昵称</span><input name="name" required minlength="2" maxlength="40" /></label>
-        <label><span data-i18n="auth.city">城市</span><input name="city" maxlength="40" list="cityOptions" /></label>
+        <label><span data-i18n="auth.city">城市 / 地区</span><input name="city" maxlength="40" list="cityOptions" /></label>
       </div>
       <div class="grid2">
         <label><span data-i18n="profile.emailLocked">邮箱（登录用，不可改）</span><input name="email" disabled /></label>
@@ -357,26 +429,25 @@
 </main>
 
 <footer class="foot">
-  <p data-i18n="foot.main">知音配对 · MusicMatch — 一个把学生和音乐老师放在同一张桌子上的小站。</p>
-  <p class="fine" data-i18n="foot.fine">双方同意后才交换联系方式 · 不公开手机号 · 遇到骚扰可以直接拒绝并删除请求</p>
+  <p data-i18n="foot.main">知音配对 · MusicMatch — 学生、老师、管理员各司其职。</p>
+  <p class="fine" data-i18n="foot.fine">学生提交申请 · 管理员分配老师 · 联系方式只给被分配的一方</p>
 </footer>
 
-<!-- 发起配对的弹窗 -->
+<!-- 管理员：候选老师弹窗 -->
 <div class="modal" id="modal" hidden>
   <div class="modalbox">
-    <h3 id="modalTitle">想认识</h3>
-    <p class="muted" id="modalSub" data-i18n="modal.sub">发一条请求过去。对方同意后，你们才会互相看到邮箱。</p>
-    <textarea id="modalMsg" rows="4" maxlength="500" data-i18n-ph="modal.msg.ph" placeholder="说一句你想学什么 / 你能教什么（可不填）"></textarea>
+    <h3 id="modalTitle">推荐老师</h3>
+    <p class="muted" id="modalSub">按乐器匹配、同城、预算、当前带的学生数排序。</p>
+    <div class="candlist" id="candList"></div>
     <div class="modalactions">
       <button class="btn ghost" id="modalCancel" data-i18n="modal.cancel">取消</button>
-      <button class="btn solid" id="modalSend" data-i18n="modal.send">发出请求</button>
     </div>
   </div>
 </div>
 
 <div class="toast" id="toast" hidden></div>
 
-<!-- 城市候选：填过就能直接选，也可以自己随便填 -->
+<!-- 城市候选 -->
 <datalist id="cityOptions">
   <option value="北京"></option><option value="上海"></option><option value="广州"></option>
   <option value="深圳"></option><option value="杭州"></option><option value="南京"></option>

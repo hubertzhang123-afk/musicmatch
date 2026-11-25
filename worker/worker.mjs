@@ -1,29 +1,30 @@
 // 知音配对 · Cloudflare Worker 版（Workers + D1）
+// 三级账号：admin（管理分配）/ teacher（作品集 + 我的学生）/ student（申请表）
 // 静态页面由 [assets] 直接发，这个 worker 只处理 /api/*
 // 注意：免费档单次请求 CPU 只有 10ms，所以密码用 PBKDF2-10k（不能用 scrypt）
 
 const SESSION_DAYS = 30;
 const PBKDF2_ITER = 10000;
-const ROLES = ['teacher', 'family'];
+const ROLES = ['teacher', 'student'];          // 可自助注册的角色（admin 只能内部创建）
+const ALL_ROLES = ['admin', 'teacher', 'student'];
 const LEVELS = ['零基础', '入门', '进阶', '高级', '艺考 / 专业'];
 const MODES = ['线下', '线上', '线上 + 线下'];
 
 const ERR = {
-  role_required: '请选择身份：老师 或 家长/学生',
+  role_required: '请选择身份：老师 或 学生',
   name_short: '名字至少 2 个字',
   email_invalid: '邮箱格式不对',
   password_short: '密码至少 8 位',
   email_taken: '这个邮箱已经注册过了',
   bad_credentials: '邮箱或密码不对',
   not_logged_in: '请先登录',
-  role_mismatch: '需要一位老师 + 一位家长/学生 才能配对',
-  self_match: '不能和自己配对',
-  already_matched: '你们已经配上了',
-  already_pending: '已经有一条待回复的请求了',
+  forbidden: '这个操作你的身份没有权限',
   not_found: '找不到这条记录',
-  not_recipient: '只有收到邀请的一方能回复',
-  already_handled: '这条请求已经处理过了',
   rate_limited: '操作太频繁了，请稍后再试',
+  request_incomplete: '请把乐器、学生姓名、联系方式填完',
+  bad_teacher: '选中的不是一位老师',
+  no_request: '还没有提交申请表',
+  request_exists: '已经提交过了，可以直接修改',
 };
 
 // ---------------------------------------------------------------- 基础工具
@@ -49,7 +50,7 @@ function num(v, min, max, fallback = null) {
   return Math.min(max, Math.max(min, Math.round(n)));
 }
 
-const oneOf = (v, list, fallback) => (list.includes(v) ? v : fallback);
+const oneOf = (v, l, fallback) => (l.includes(v) ? v : fallback);
 
 function listOf(v, max = 8, itemMax = 30) {
   if (!v) return [];
@@ -98,31 +99,37 @@ async function verifyPassword(password, saltHex, stored) {
   return diff === 0;
 }
 
-// ---------------------------------------------------------------- 输入清洗
+// ---------------------------------------------------------------- 资料清洗
 function cleanProfile(role, p = {}) {
   if (role === 'teacher') {
     return {
       instruments: listOf(p.instruments, 6),
-      styles: str(p.styles, 120),
       levels: listOf(p.levels, 5),
       years: num(p.years, 0, 60, 0),
       rate: num(p.rate, 0, 5000, 0),
       mode: oneOf(str(p.mode, 20), MODES, '线上 + 线下'),
+      styles: str(p.styles, 120),
+      education: str(p.education, 160),
+      qualifications: str(p.qualifications, 600),   // 各乐器的资质
+      nationality: str(p.nationality, 40),
+      languages: listOf(p.languages, 6, 20),
       city: str(p.city, 40),
-      education: str(p.education, 120),
       intro: str(p.intro, 1200),
     };
   }
-  return {
-    instruments: listOf(p.instruments, 6),
-    level: oneOf(str(p.level, 20), LEVELS, '零基础'),
-    studentAge: str(p.studentAge, 40),
-    goal: str(p.goal, 160),
-    budget: num(p.budget, 0, 5000, 0),
-    mode: oneOf(str(p.mode, 20), MODES, '线上 + 线下'),
-    city: str(p.city, 40),
-    intro: str(p.intro, 1200),
-  };
+  if (role === 'student') {
+    return {
+      instruments: listOf(p.instruments, 6),
+      level: oneOf(str(p.level, 20), LEVELS, '零基础'),
+      studentAge: str(p.studentAge, 40),
+      goal: str(p.goal, 160),
+      budget: num(p.budget, 0, 5000, 0),
+      mode: oneOf(str(p.mode, 20), MODES, '线上 + 线下'),
+      city: str(p.city, 40),
+      intro: str(p.intro, 1200),
+    };
+  }
+  return { city: str(p.city, 40), intro: str(p.intro, 400) };   // admin：简单资料
 }
 
 const rowUser = (r) => ({
@@ -132,15 +139,17 @@ const rowUser = (r) => ({
   createdAt: Number(r.created_at),
 });
 
-const rowReq = (r) => ({
-  id: r.id, fromId: r.from_id, toId: r.to_id, message: r.message || '',
-  status: r.status, createdAt: Number(r.created_at), updatedAt: Number(r.updated_at),
-});
-
 const publicProfile = (u) => {
   const p = u.profile || {};
   return { id: u.id, role: u.role, name: u.name, city: u.city || p.city || '', profile: p, createdAt: u.createdAt };
 };
+
+const rowReq = (r) => ({
+  id: r.id, studentId: r.student_id, instrument: r.instrument || '', times: r.times || '',
+  studentName: r.student_name || '', contact: r.contact || '', note: r.note || '',
+  status: r.status || 'pending', teacherId: r.teacher_id || null,
+  createdAt: Number(r.created_at), updatedAt: Number(r.updated_at),
+});
 
 // ---------------------------------------------------------------- D1
 let schemaReady = null;
@@ -152,11 +161,20 @@ function ensureSchema(env) {
         id text primary key, role text not null, name text not null, email text not null unique,
         salt text not null, hash text not null, city text, profile text not null default '{}',
         created_at integer not null)`),
-      env.DB.prepare(`create table if not exists match_requests (
-        id text primary key, from_id text not null, to_id text not null, message text not null default '',
-        status text not null default 'pending', created_at integer not null, updated_at integer not null)`),
-      env.DB.prepare('create index if not exists idx_req_to on match_requests(to_id, status)'),
-      env.DB.prepare('create index if not exists idx_req_from on match_requests(from_id)'),
+      env.DB.prepare(`create table if not exists requests (
+        id text primary key,
+        student_id text not null unique,
+        instrument text not null default '',
+        times text not null default '',
+        student_name text not null default '',
+        contact text not null default '',
+        note text not null default '',
+        status text not null default 'pending',
+        teacher_id text,
+        created_at integer not null,
+        updated_at integer not null)`),
+      env.DB.prepare('create index if not exists idx_req_status on requests(status)'),
+      env.DB.prepare('create index if not exists idx_req_teacher on requests(teacher_id)'),
       env.DB.prepare(`create table if not exists sessions (
         token text primary key, user_id text not null, exp integer not null)`),
       env.DB.prepare('create index if not exists idx_sess_user on sessions(user_id)'),
@@ -203,7 +221,7 @@ async function currentUser(request, env) {
   return u ? rowUser(u) : null;
 }
 
-// 限流：每个 isolate 内存计数（够挡住手滑，不保证跨节点）
+// 限流：每个 isolate 内存计数
 const buckets = new Map();
 function rateLimit(request, key, max = 30, windowMs = 10 * 60 * 1000) {
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
@@ -216,17 +234,44 @@ function rateLimit(request, key, max = 30, windowMs = 10 * 60 * 1000) {
   return rec.n <= max;
 }
 
-// ---------------------------------------------------------------- 配对关系
-async function listRequests(env) {
-  return (await all(env, 'select * from match_requests order by created_at desc')).map(rowReq);
+// ---------------------------------------------------------------- 分配/排序
+/**
+ * 给一条学生申请排老师：乐器命中 > 同城 > 预算内 > 授课方式一致 > 目前带的少
+ * 返回按分数降序的候选列表（管理员用来一键分配）
+ */
+function rankTeachers(request, teachers, loadByTeacher) {
+  const want = (request.instrument || '').toLowerCase();
+  return teachers
+    .map((t) => {
+      const p = t.profile || {};
+      const instruments = (p.instruments || []).map((s) => s.toLowerCase());
+      const load = loadByTeacher.get(t.id) || 0;
+      let score = 0;
+      const reasons = [];
+      const hit = want && instruments.some((i) => i.includes(want) || want.includes(i));
+      if (hit) { score += 100; reasons.push('instrument'); }
+      // 城市在 user 表上（注册时填的），不在 profile 里
+      const tCity = t.city || p.city || '';
+      if (request.city && tCity && request.city.includes(tCity)) { score += 30; reasons.push('city'); }
+      if (request.budget && p.rate) {
+        if (p.rate <= request.budget) { score += 20; reasons.push('budget'); }
+        else score -= 10;
+      }
+      if (request.mode && p.mode) {
+        if (p.mode === request.mode || p.mode === '线上 + 线下') { score += 10; reasons.push('mode'); }
+      }
+      score += Math.max(0, 5 - load) * 2;
+      if (load === 0) reasons.push('free');
+      return { teacher: publicProfile(t), score, reasons, load };
+    })
+    .sort((a, b) => b.score - a.score || a.load - b.load);
 }
 
-async function matchState(env, aId, bId, cache) {
-  const rows = cache || (await listRequests(env));
-  const rel = rows.filter((r) => (r.fromId === aId && r.toId === bId) || (r.fromId === bId && r.toId === aId));
-  if (rel.some((r) => r.status === 'accepted')) return 'accepted';
-  if (rel.some((r) => r.status === 'pending')) return 'pending';
-  return rel.length ? 'declined' : 'none';
+async function teacherLoad(env) {
+  const rows = await all(env, "select teacher_id, count(*) as n from requests where teacher_id is not null group by teacher_id");
+  const map = new Map();
+  for (const r of rows) map.set(r.teacher_id, Number(r.n));
+  return map;
 }
 
 // ---------------------------------------------------------------- API
@@ -247,25 +292,32 @@ export async function handleApi(request, env, url) {
     });
   }
 
+  const readJson = async () => {
+    try { return await request.json(); } catch { return null; }
+  };
+
   // ---- 健康检查 ----
   if (p === '/health') {
     const users = await all(env, 'select role from users');
-    const reqs = await all(env, 'select status from match_requests');
+    const reqs = await all(env, 'select status, teacher_id from requests');
     return json({
       ok: true,
       storage: 'd1',
       users: users.length,
+      admins: users.filter((u) => u.role === 'admin').length,
       teachers: users.filter((u) => u.role === 'teacher').length,
-      families: users.filter((u) => u.role === 'family').length,
-      accepted: reqs.filter((r) => r.status === 'accepted').length,
+      students: users.filter((u) => u.role === 'student').length,
+      requests: reqs.length,
+      pending: reqs.filter((r) => r.status === 'pending').length,
+      assigned: reqs.filter((r) => r.teacher_id).length,
     });
   }
 
-  // ---- 注册 ----
+  // ---- 注册（只有老师 / 学生）----
   if (p === '/register' && method === 'POST') {
     if (!rateLimit(request, 'register', 20)) return fail(429, 'rate_limited');
-    let body;
-    try { body = await request.json(); } catch { return json({ error: 'JSON 格式错误' }, 400); }
+    const body = await readJson();
+    if (!body) return json({ error: 'JSON 格式错误' }, 400);
 
     const role = oneOf(str(body.role, 10), ROLES, '');
     if (!role) return fail(400, 'role_required');
@@ -303,8 +355,8 @@ export async function handleApi(request, env, url) {
   // ---- 登录 ----
   if (p === '/login' && method === 'POST') {
     if (!rateLimit(request, 'login', 40)) return fail(429, 'rate_limited');
-    let body;
-    try { body = await request.json(); } catch { return json({ error: 'JSON 格式错误' }, 400); }
+    const body = await readJson();
+    if (!body) return json({ error: 'JSON 格式错误' }, 400);
     const email = str(body.email, 120).toLowerCase();
     const password = String(body.password ?? '');
     const row = await one(env, 'select * from users where email = ?', email);
@@ -328,13 +380,26 @@ export async function handleApi(request, env, url) {
   if (p === '/me' && method === 'GET') {
     const user = await currentUser(request, env);
     if (!user) return fail(401, 'not_logged_in');
-    const reqs = await listRequests(env);
+    const mine = await one(env, 'select * from requests where student_id = ?', user.id);
+    let assignment = null;
+    if (mine && mine.teacher_id) {
+      const t = await one(env, 'select * from users where id = ?', mine.teacher_id);
+      if (t) assignment = { ...publicProfile(rowUser(t)), email: t.email };
+    }
+    const counts = { assignedStudents: 0, pendingRequests: 0 };
+    if (user.role === 'teacher') {
+      counts.assignedStudents = Number((await one(env, 'select count(*) as n from requests where teacher_id = ?', user.id)).n);
+    }
+    if (user.role === 'admin') {
+      const reqs = await all(env, 'select status from requests');
+      counts.pendingRequests = reqs.filter((r) => r.status === 'pending').length;
+      counts.totalRequests = reqs.length;
+    }
     return json({
       user: { ...publicProfile(user), email: user.email },
-      stats: {
-        incoming: reqs.filter((r) => r.toId === user.id && r.status === 'pending').length,
-        accepted: reqs.filter((r) => r.status === 'accepted' && (r.toId === user.id || r.fromId === user.id)).length,
-      },
+      request: mine ? rowReq(mine) : null,
+      assignment,
+      counts,
     });
   }
 
@@ -342,8 +407,8 @@ export async function handleApi(request, env, url) {
   if (p === '/profile' && method === 'PATCH') {
     const user = await currentUser(request, env);
     if (!user) return fail(401, 'not_logged_in');
-    let body;
-    try { body = await request.json(); } catch { return json({ error: 'JSON 格式错误' }, 400); }
+    const body = await readJson();
+    if (!body) return json({ error: 'JSON 格式错误' }, 400);
 
     let name = user.name;
     let city = user.city;
@@ -362,11 +427,11 @@ export async function handleApi(request, env, url) {
     return json({ user: { ...publicProfile({ ...user, name, city, profile }), email: user.email } });
   }
 
-  // ---- 浏览 ----
+  // ---- 浏览（老师看学生 / 学生看老师）----
   if (p === '/browse' && method === 'GET') {
     const user = await currentUser(request, env);
     const want = url.searchParams.get('role');
-    const role = oneOf(want, ROLES, user ? (user.role === 'teacher' ? 'family' : 'teacher') : 'teacher');
+    const role = oneOf(want, ['teacher', 'student'], user && user.role !== 'admin' ? (user.role === 'teacher' ? 'student' : 'teacher') : 'teacher');
     const needle = str(url.searchParams.get('q') || '', 60).toLowerCase();
     const instrument = str(url.searchParams.get('instrument') || '', 30);
     const city = str(url.searchParams.get('city') || '', 30);
@@ -374,21 +439,15 @@ export async function handleApi(request, env, url) {
     const rateParam = url.searchParams.get('maxRate');
     const maxRate = rateParam === null || rateParam.trim() === '' ? null : num(rateParam, 0, 5000, null);
 
-    const myReqs = user ? await listRequests(env) : [];
     const rows = await all(env, 'select * from users where role = ? order by created_at desc', role);
     const items = [];
     for (const r of rows) {
       const u = rowUser(r);
       if (user && u.id === user.id) continue;
       const pub = publicProfile(u);
-      if (user) {
-        pub.matchState = await matchState(env, user.id, u.id, myReqs);
-        if (pub.matchState === 'accepted') pub.email = u.email;
-      } else {
-        pub.matchState = 'none';
-      }
       const prof = pub.profile || {};
-      const hay = [pub.name, pub.city, prof.intro, prof.goal, prof.styles, prof.education,
+      const hay = [pub.name, pub.city, prof.intro, prof.goal, prof.styles, prof.education, prof.qualifications,
+        prof.nationality, (prof.languages || []).join(' '),
         (prof.instruments || []).join(' '), (prof.levels || []).join(' '), prof.level, prof.studentAge]
         .filter(Boolean).join(' ').toLowerCase();
       if (needle && !hay.includes(needle)) continue;
@@ -401,85 +460,181 @@ export async function handleApi(request, env, url) {
     return json({ role, items, total: items.length });
   }
 
-  // ---- 发起配对 ----
-  if (p === '/requests' && method === 'POST') {
+  // ---- 学生：提交 / 修改申请表 ----
+  if (p === '/student/request' && method === 'POST') {
     const user = await currentUser(request, env);
     if (!user) return fail(401, 'not_logged_in');
-    if (!rateLimit(request, 'match', 60)) return fail(429, 'rate_limited');
-    let body;
-    try { body = await request.json(); } catch { return json({ error: 'JSON 格式错误' }, 400); }
+    if (user.role !== 'student') return fail(403, 'forbidden');
+    if (!rateLimit(request, 'req', 40)) return fail(429, 'rate_limited');
+    const body = await readJson();
+    if (!body) return json({ error: 'JSON 格式错误' }, 400);
 
-    const toId = str(body.toUserId, 30);
-    const targetRow = await one(env, 'select * from users where id = ?', toId);
-    if (!targetRow) return fail(404, 'not_found');
-    const target = rowUser(targetRow);
-    if (target.id === user.id) return fail(400, 'self_match');
-    if (target.role === user.role) return fail(400, 'role_mismatch');
-
-    const state = await matchState(env, user.id, target.id);
-    if (state === 'accepted') return fail(409, 'already_matched');
-    if (state === 'pending') return fail(409, 'already_pending');
-
-    const req = {
-      id: uid(6), fromId: user.id, toId: target.id,
-      message: str(body.message, 500), status: 'pending',
-      createdAt: now(), updatedAt: now(),
+    const instrument = str(body.instrument, 60);
+    const studentName = str(body.studentName, 40) || user.name;
+    const contact = str(body.contact, 120);
+    if (instrument.length < 2 || studentName.length < 2 || contact.length < 3) {
+      return fail(400, 'request_incomplete');
+    }
+    const times = str(body.times, 200);
+    const note = str(body.note, 500);
+    const exist = await one(env, 'select * from requests where student_id = ?', user.id);
+    if (exist) {
+      await run(
+        env,
+        `update requests set instrument = ?, times = ?, student_name = ?, contact = ?, note = ?, updated_at = ?
+         where student_id = ?`,
+        instrument, times, studentName, contact, note, now(), user.id
+      );
+      return json({ request: rowReq(await one(env, 'select * from requests where student_id = ?', user.id)) });
+    }
+    const rec = {
+      id: uid(6), studentId: user.id, instrument, times, studentName, contact, note,
+      status: 'pending', teacherId: null, createdAt: now(), updatedAt: now(),
     };
     await run(
       env,
-      `insert into match_requests (id, from_id, to_id, message, status, created_at, updated_at)
-       values (?,?,?,?,?,?,?)`,
-      req.id, req.fromId, req.toId, req.message, req.status, req.createdAt, req.updatedAt
+      `insert into requests (id, student_id, instrument, times, student_name, contact, note, status, teacher_id, created_at, updated_at)
+       values (?,?,?,?,?,?,?,?,?,?,?)`,
+      rec.id, rec.studentId, rec.instrument, rec.times, rec.studentName, rec.contact, rec.note,
+      rec.status, null, rec.createdAt, rec.updatedAt
     );
-    return json({ request: req }, 201);
+    return json({ request: rec }, 201);
   }
 
-  // ---- 我的配对 ----
-  if (p === '/requests' && method === 'GET') {
+  if (p === '/student/request' && method === 'GET') {
     const user = await currentUser(request, env);
     if (!user) return fail(401, 'not_logged_in');
-    const reqs = await listRequests(env);
+    if (user.role !== 'student') return fail(403, 'forbidden');
+    const row = await one(env, 'select * from requests where student_id = ?', user.id);
+    if (!row) return json({ request: null, teacher: null });
+    let teacher = null;
+    if (row.teacher_id) {
+      const t = await one(env, 'select * from users where id = ?', row.teacher_id);
+      if (t) teacher = { ...publicProfile(rowUser(t)), email: t.email };
+    }
+    return json({ request: rowReq(row), teacher });
+  }
+
+  // ---- 老师：我分配到的学生 ----
+  if (p === '/teacher/students' && method === 'GET') {
+    const user = await currentUser(request, env);
+    if (!user) return fail(401, 'not_logged_in');
+    if (user.role !== 'teacher') return fail(403, 'forbidden');
+    const rows = await all(env, 'select * from requests where teacher_id = ? order by updated_at desc', user.id);
+    const students = [];
+    for (const r of rows) {
+      const u = await one(env, 'select * from users where id = ?', r.student_id);
+      students.push({
+        ...rowReq(r),
+        student: u ? publicProfile(rowUser(u)) : null,
+        studentEmail: u ? u.email : null,
+      });
+    }
+    return json({ students });
+  }
+
+  // ---- 管理员：总览 ----
+  if (p === '/admin/overview' && method === 'GET') {
+    const user = await currentUser(request, env);
+    if (!user) return fail(401, 'not_logged_in');
+    if (user.role !== 'admin') return fail(403, 'forbidden');
+    const users = await all(env, 'select role from users');
+    const reqs = await all(env, 'select * from requests');
+    const teachers = await all(env, "select id, name from users where role = 'teacher'");
+    const load = await teacherLoad(env);
+    return json({
+      totals: {
+        admins: users.filter((u) => u.role === 'admin').length,
+        teachers: users.filter((u) => u.role === 'teacher').length,
+        students: users.filter((u) => u.role === 'student').length,
+        requests: reqs.length,
+        pending: reqs.filter((r) => !r.teacher_id).length,
+        assigned: reqs.filter((r) => r.teacher_id).length,
+      },
+      teachers: teachers.map((t) => ({ id: t.id, name: t.name, load: load.get(t.id) || 0 })),
+    });
+  }
+
+  // ---- 管理员：申请列表（含学生与老师信息）----
+  if (p === '/admin/requests' && method === 'GET') {
+    const user = await currentUser(request, env);
+    if (!user) return fail(401, 'not_logged_in');
+    if (user.role !== 'admin') return fail(403, 'forbidden');
+    const rows = await all(env, 'select * from requests order by created_at desc');
     const users = await all(env, 'select * from users');
     const byId = new Map(users.map((u) => [u.id, rowUser(u)]));
-    const decorate = (r, otherId) => {
-      const other = byId.get(otherId);
+    const items = rows.map((r) => {
+      const s = byId.get(r.student_id);
+      const t = r.teacher_id ? byId.get(r.teacher_id) : null;
       return {
-        ...r,
-        peer: other ? publicProfile(other) : { id: otherId, name: '（已注销）', profile: {} },
-        peerEmail: r.status === 'accepted' && other ? other.email : null,
+        ...rowReq(r),
+        student: s ? { ...publicProfile(s), email: s.email } : null,
+        teacher: t ? { ...publicProfile(t), email: t.email } : null,
       };
-    };
-    const incoming = reqs.filter((r) => r.toId === user.id).map((r) => decorate(r, r.fromId));
-    const outgoing = reqs.filter((r) => r.fromId === user.id).map((r) => decorate(r, r.toId));
-    return json({ incoming, outgoing });
+    });
+    return json({ items });
   }
 
-  // ---- 回复配对 ----
-  const m = p.match(/^\/requests\/([\w-]{4,40})\/(accept|decline)$/);
-  if (m && method === 'POST') {
+  // ---- 管理员：某条申请的推荐老师（排序）----
+  if (p === '/admin/candidates' && method === 'GET') {
     const user = await currentUser(request, env);
     if (!user) return fail(401, 'not_logged_in');
-    const row = await one(env, 'select * from match_requests where id = ?', m[1]);
+    if (user.role !== 'admin') return fail(403, 'forbidden');
+    const id = str(url.searchParams.get('requestId') || '', 40);
+    const row = await one(env, 'select * from requests where id = ?', id);
     if (!row) return fail(404, 'not_found');
-    const r = rowReq(row);
-    if (r.toId !== user.id) return fail(403, 'not_recipient');
-    if (r.status !== 'pending') return fail(409, 'already_handled');
-    const status = m[2] === 'accept' ? 'accepted' : 'declined';
-    await run(env, 'update match_requests set status = ?, updated_at = ? where id = ?', status, now(), r.id);
-    return json({ request: { ...r, status } });
+    const teachers = (await all(env, "select * from users where role = 'teacher'")).map(rowUser);
+    const load = await teacherLoad(env);
+    const req = rowReq(row);
+    const student = await one(env, 'select * from users where id = ?', row.student_id);
+    const sp = student ? rowUser(student).profile || {} : {};
+    const shaped = { ...req, city: student ? (student.city || sp.city || '') : '', budget: sp.budget || 0, mode: sp.mode || '' };
+    return json({ candidates: rankTeachers(shaped, teachers, load) });
   }
 
-  // ---- 撤销 ----
-  const dm = p.match(/^\/requests\/([\w-]{4,40})$/);
-  if (dm && method === 'DELETE') {
+  // ---- 管理员：分配 / 取消分配 ----
+  if (p === '/admin/assign' && method === 'POST') {
     const user = await currentUser(request, env);
     if (!user) return fail(401, 'not_logged_in');
-    const row = await one(env, 'select * from match_requests where id = ?', dm[1]);
+    if (user.role !== 'admin') return fail(403, 'forbidden');
+    const body = await readJson();
+    if (!body) return json({ error: 'JSON 格式错误' }, 400);
+    const requestId = str(body.requestId, 40);
+    const teacherId = str(body.teacherId, 40);
+    const row = await one(env, 'select * from requests where id = ?', requestId);
     if (!row) return fail(404, 'not_found');
-    const r = rowReq(row);
-    if (r.fromId !== user.id) return fail(404, 'not_found');
-    await run(env, 'delete from match_requests where id = ?', r.id);
+    const t = await one(env, 'select * from users where id = ?', teacherId);
+    if (!t || t.role !== 'teacher') return fail(400, 'bad_teacher');
+    await run(env, 'update requests set teacher_id = ?, status = ?, updated_at = ? where id = ?',
+      t.id, 'assigned', now(), requestId);
+    return json({ ok: true, request: rowReq(await one(env, 'select * from requests where id = ?', requestId)) });
+  }
+
+  if (p === '/admin/unassign' && method === 'POST') {
+    const user = await currentUser(request, env);
+    if (!user) return fail(401, 'not_logged_in');
+    if (user.role !== 'admin') return fail(403, 'forbidden');
+    const body = await readJson();
+    if (!body) return json({ error: 'JSON 格式错误' }, 400);
+    const requestId = str(body.requestId, 40);
+    const row = await one(env, 'select * from requests where id = ?', requestId);
+    if (!row) return fail(404, 'not_found');
+    await run(env, "update requests set teacher_id = null, status = 'pending', updated_at = ? where id = ?", now(), requestId);
     return json({ ok: true });
+  }
+
+  // ---- 管理员：用户列表（不含密码字段）----
+  if (p === '/admin/users' && method === 'GET') {
+    const user = await currentUser(request, env);
+    if (!user) return fail(401, 'not_logged_in');
+    if (user.role !== 'admin') return fail(403, 'forbidden');
+    const rows = await all(env, 'select * from users order by created_at desc');
+    return json({
+      items: rows.map((r) => {
+        const u = rowUser(r);
+        return { ...publicProfile(u), email: u.email };
+      }),
+    });
   }
 
   return json({ error: 'API 不存在: ' + p }, 404);
